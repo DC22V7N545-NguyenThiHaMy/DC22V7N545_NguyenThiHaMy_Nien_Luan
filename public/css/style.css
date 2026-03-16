@@ -1,0 +1,222 @@
+/* Phong cách trẻ trung cho TicketHub */
+:root {
+  --th-primary: #020617;
+  --th-accent: #fbbf24;
+  --th-accent-soft: rgba(251, 191, 36, 0.16);
+  --th-bg: #020617;
+  --th-card: #020617;
+}
+
+/* Reset margin mặc định để navbar dính sát trên */
+body {
+  margin: 0;
+}
+
+/* Nền chính: đơn giản, tương phản tốt */
+body.bg-landing {
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #1e293b 0, #020617 55%);
+  color: #f9fafb;
+}
+
+/* Tăng độ sáng chữ mặc định trên nền tối */
+body.bg-landing,
+.th-page-gradient {
+  color: #e5e7eb;
+}
+
+body.bg-landing .text-muted,
+.th-page-gradient .text-muted {
+  color: #cbd5f5 !important;
+}
+
+.th-hero-title {
+  background: linear-gradient(120deg, #facc15, #22c55e, #38bdf8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.th-hero-badge {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  color: #e5e7eb;
+  backdrop-filter: blur(18px);
+}
+
+.th-card-glass {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.8));
+  border-radius: 1.25rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow:
+    0 22px 50px rgba(15, 23, 42, 0.8),
+    0 0 0 1px rgba(15, 23, 42, 0.9);
+}
+
+.th-card-glass .badge {
+  border-radius: 999px;
+}
+
+.th-card-feature {
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, border-color 0.2s ease-out;
+  border-radius: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.96));
+  color: #e5e7eb;
+}
+
+.th-card-feature:hover {
+  transform: translateY(-6px) translateZ(0);
+  box-shadow: 0 24px 45px rgba(15, 23, 42, 0.9);
+  border-color: rgba(251, 191, 36, 0.65);
+}
+
+.th-chip {
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.85);
+  padding: 0.35rem 0.9rem;
+  font-size: 0.78rem;
+}
+
+.btn-th-primary {
+  background: radial-gradient(circle at top left, #facc15, #f97316);
+  border: none;
+  color: #111827;
+  box-shadow: 0 14px 35px rgba(248, 181, 0, 0.45);
+}
+
+.btn-th-primary:hover {
+  background: radial-gradient(circle at top left, #facc15, #ea580c);
+  box-shadow: 0 18px 45px rgba(248, 181, 0, 0.65);
+  transform: translateY(-1px);
+}
+
+.btn-th-outline {
+  border-radius: 999px;
+  border-width: 1px;
+}
+
+.th-floating-badge {
+  animation: th-float 5s ease-in-out infinite;
+}
+
+@keyframes th-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* Scroll reveal (mặc định hiện; JS chỉ thêm animation nhẹ) */
+.th-reveal {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+
+.th-reveal.th-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Profile / form pages */
+.th-page-gradient {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(56, 189, 248, 0.22), transparent 55%),
+    radial-gradient(circle at bottom right, rgba(251, 191, 36, 0.28), transparent 60%),
+    #020617;
+  color: #e5e7eb;
+}
+
+.th-auth-card {
+  border-radius: 1.5rem;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.9));
+  color: #e5e7eb;
+  box-shadow:
+    0 24px 60px rgba(15, 23, 42, 0.95),
+    0 0 0 1px rgba(15, 23, 42, 0.9);
+}
+
+.th-input-dark.form-control {
+  background-color: #020617;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  color: #f9fafb;
+}
+
+.th-input-dark.form-control::placeholder {
+  color: #9ca3af;
+}
+
+.th-input-dark.form-control:focus {
+  border-color: rgba(251, 191, 36, 0.9);
+  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.7);
+  background-color: #020617;
+  color: #f9fafb;
+}
+
+.th-form-label {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #9ca3af;
+}
+
+.th-badge-soft {
+  background: var(--th-accent-soft);
+  color: var(--th-accent);
+  border-radius: 999px;
+  border: 1px solid rgba(251, 191, 36, 0.5);
+}
+
+.th-navbar-blur {
+  backdrop-filter: blur(16px);
+  background-color: rgba(15, 23, 42, 0.92) !important;
+}
+
+/* Toast bong bóng */
+.th-toast {
+  border-radius: 1.1rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(2, 6, 23, 0.92);
+  color: #f9fafb;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 45px rgba(2, 6, 23, 0.6);
+  max-width: 360px;
+}
+
+.th-toast .toast-body {
+  padding: 0.85rem 0.9rem;
+}
+
+.th-toast-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  margin-top: 0.35rem;
+  flex: 0 0 auto;
+  box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.12);
+  background: #38bdf8;
+}
+
+.th-toast-success .th-toast-dot {
+  background: #22c55e;
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.16);
+}
+
+.th-toast-danger .th-toast-dot {
+  background: #ef4444;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.16);
+}
+
+.th-toast-warning .th-toast-dot {
+  background: #f59e0b;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.18);
+}
+
