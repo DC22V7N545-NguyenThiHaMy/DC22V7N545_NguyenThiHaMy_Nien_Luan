@@ -23,8 +23,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'login') {
         $authController->login();
     }
-    if ($action === 'create_staff') {
-        $adminController->createStaff();
+    if ($action === 'create_user') {
+        $adminController->createUser();
     }
 }
 

@@ -74,4 +74,23 @@ class User {
 
         return ['success' => false, 'message' => 'Mật khẩu không đúng.', 'user' => null];
     }
+
+    /**
+     * Lấy danh sách người dùng (phục vụ admin).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getAllUsers(): array
+    {
+        $sql = "SELECT ma_nguoi_dung, ho_ten, email, so_dien_thoai, dia_chi, vai_tro, ngay_tao
+                FROM nguoi_dung
+                ORDER BY ma_nguoi_dung DESC";
+        $result = $this->conn->query($sql);
+
+        if (!$result) {
+            return [];
+        }
+
+        return $result->fetch_all(MYSQLI_ASSOC);
+    }
 }

@@ -154,6 +154,14 @@ body.bg-landing .text-muted,
   color: #9ca3af;
 }
 
+/* hỗ trợ select dùng chung theme input */
+.th-input-dark.form-select {
+  background-color: #020617;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  color: #f9fafb;
+}
+
 .th-input-dark.form-control:focus {
   border-color: rgba(251, 191, 36, 0.9);
   box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.7);
@@ -218,5 +226,35 @@ body.bg-landing .text-muted,
 .th-toast-warning .th-toast-dot {
   background: #f59e0b;
   box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.18);
+}
+
+/* Admin layout */
+.th-admin-shell {
+  min-height: 100vh;
+}
+
+.th-admin-sidebar {
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 1.25rem;
+  background: rgba(2, 6, 23, 0.6);
+  backdrop-filter: blur(16px);
+}
+
+.th-admin-link {
+  border-radius: 0.9rem;
+  color: #e5e7eb;
+  border: 1px solid transparent;
+}
+
+.th-admin-link:hover {
+  background: rgba(148, 163, 184, 0.12);
+  border-color: rgba(148, 163, 184, 0.25);
+  color: #f9fafb;
+}
+
+.th-admin-link.active {
+  background: rgba(251, 191, 36, 0.14);
+  border-color: rgba(251, 191, 36, 0.45);
+  color: #f9fafb;
 }
 

@@ -27,6 +27,33 @@ class AuthController {
         $password = $_POST['password'] ?? '';
         $confirmPassword = $_POST['confirm_password'] ?? '';
 
+        if ($fullName === '' || $email === '' || $password === '' || $confirmPassword === '') {
+            $_SESSION['flash'] = ['type' => 'warning', 'message' => 'Vui lòng nhập đầy đủ thông tin bắt buộc.'];
+            header('Location: index.php?action=register');
+            exit;
+        }
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Email không đúng định dạng.'];
+            header('Location: index.php?action=register');
+            exit;
+        }
+
+        // SĐT: cho phép bỏ trống, nhưng nếu nhập thì phải đúng định dạng VN (0 + 9 số)
+        if ($phone !== '' && !preg_match('/^0\d{9}$/', $phone)) {
+            $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Số điện thoại không đúng định dạng (VD: 0901234567).'];
+            header('Location: index.php?action=register');
+            exit;
+        }
+
+        // Mật khẩu: >= 8 ký tự, có hoa + thường + số + ký tự đặc biệt
+        $pwOk = (bool)preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/', $password);
+        if (!$pwOk) {
+            $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Mật khẩu phải ≥ 8 ký tự và gồm chữ hoa, chữ thường, số, ký tự đặc biệt.'];
+            header('Location: index.php?action=register');
+            exit;
+        }
+
         if ($password !== $confirmPassword) {
             $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Mật khẩu và xác nhận mật khẩu không khớp.'];
             header('Location: index.php?action=register');

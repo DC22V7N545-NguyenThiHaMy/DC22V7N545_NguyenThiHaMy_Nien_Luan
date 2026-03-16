@@ -52,7 +52,7 @@ $user = $_SESSION['user'] ?? null;
             </div>
             <div class="mb-3">
               <label class="form-label th-form-label" for="phone">Số điện thoại</label>
-              <input class="form-control th-input-dark" type="tel" id="phone" name="phone" placeholder="VD: 0901234567">
+              <input class="form-control th-input-dark" type="tel" id="phone" name="phone" placeholder="VD: 0901234567" pattern="^0\d{9}$" title="SĐT phải có 10 số và bắt đầu bằng 0 (VD: 0901234567)">
             </div>
             <div class="mb-3">
               <label class="form-label th-form-label" for="address">Địa chỉ</label>
@@ -60,11 +60,11 @@ $user = $_SESSION['user'] ?? null;
             </div>
             <div class="mb-3">
               <label class="form-label th-form-label" for="registerPassword">Mật khẩu</label>
-              <input class="form-control th-input-dark" type="password" id="registerPassword" name="password" required placeholder="Tối thiểu 6 ký tự">
+              <input class="form-control th-input-dark" type="password" id="registerPassword" name="password" required minlength="8" pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$" title="Mật khẩu phải ≥ 8 ký tự và gồm chữ hoa, chữ thường, số, ký tự đặc biệt" placeholder="VD: Abc@1234">
             </div>
             <div class="mb-3">
               <label class="form-label th-form-label" for="confirmPassword">Xác nhận mật khẩu</label>
-              <input class="form-control th-input-dark" type="password" id="confirmPassword" name="confirm_password" required placeholder="Nhập lại mật khẩu">
+              <input class="form-control th-input-dark" type="password" id="confirmPassword" name="confirm_password" required minlength="8" placeholder="Nhập lại mật khẩu">
             </div>
             <button class="btn btn-th-primary w-100 rounded-pill" type="submit">Đăng ký</button>
           </form>
