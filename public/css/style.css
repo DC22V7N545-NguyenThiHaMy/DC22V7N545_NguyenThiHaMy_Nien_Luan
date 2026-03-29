@@ -71,6 +71,24 @@ body.bg-landing .text-muted,
   border-color: rgba(251, 191, 36, 0.65);
 }
 
+.navbar .nav-link.active {
+  color: #facc15 !important;
+  font-weight: 600;
+}
+
+#home {
+  padding-top: 3.5rem;
+  padding-bottom: 3.5rem;
+}
+
+#home h1 {
+  letter-spacing: 0.08rem;
+}
+
+.th-card-glass {
+  border-left: 2px solid rgba(251, 191, 36, 0.45);
+}
+
 .th-chip {
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.4);
@@ -256,5 +274,68 @@ body.bg-landing .text-muted,
   background: rgba(251, 191, 36, 0.14);
   border-color: rgba(251, 191, 36, 0.45);
   color: #f9fafb;
+}
+
+/* Ticket detail page */
+.th-ticket-detail {
+  max-width: 1140px;
+}
+
+.th-ticket-main {
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(2, 6, 23, 0.92));
+}
+
+.th-badge-category {
+  background: #e2e8f0;
+  color: #0f172a;
+  border-radius: 999px;
+}
+
+.th-badge-status {
+  border-radius: 999px;
+}
+
+.th-ticket-title {
+  color: #f8fafc;
+  letter-spacing: 0.01em;
+}
+
+.th-ticket-type {
+  color: #facc15;
+  font-weight: 700;
+}
+
+.th-ticket-desc {
+  color: #dbeafe;
+  line-height: 1.7;
+}
+
+.th-ticket-info {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.th-ticket-info-label {
+  color: #93c5fd;
+}
+
+.th-ticket-info-value {
+  color: #f1f5f9;
+}
+
+.th-ticket-buy-card {
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.95));
+}
+
+.th-ticket-price-label {
+  color: #bfdbfe;
+}
+
+.th-ticket-price {
+  color: #facc15;
+}
+
+.th-ticket-remain {
+  color: #e2e8f0;
 }
 

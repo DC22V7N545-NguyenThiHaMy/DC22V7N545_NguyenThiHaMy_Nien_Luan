@@ -4,8 +4,10 @@ require_once 'app/model/User.php';
 
 class AuthController {
     private $userModel;
+    private $conn;
 
     public function __construct($conn) {
+        $this->conn = $conn;
         $this->userModel = new User($conn);
 
         if (session_status() === PHP_SESSION_NONE) {
@@ -87,7 +89,12 @@ class AuthController {
         $result = $this->userModel->login($email, $password);
 
         if ($result['success']) {
-            $_SESSION['user'] = ['email' => $email, 'name' => $result['user']['ho_ten'], 'role' => $result['user']['vai_tro']];
+            $_SESSION['user'] = [
+                'ma_nguoi_dung' => $result['user']['ma_nguoi_dung'],
+                'email' => $email,
+                'name' => $result['user']['ho_ten'],
+                'role' => $result['user']['vai_tro']
+            ];
             $_SESSION['flash'] = ['type' => 'success', 'message' => $result['message']];
             $role = $_SESSION['user']['role'] ?? 'khach_hang';
             if ($role === 'quan_tri_vien') {
@@ -112,6 +119,38 @@ class AuthController {
         session_unset();
         session_destroy();
         header('Location: index.php');
+        exit;
+    }
+
+    public function changePassword() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Phương thức không hợp lệ.'];
+            header('Location: index.php?action=profile');
+            exit;
+        }
+
+        // Kiểm tra người dùng đã đăng nhập
+        if (!isset($_SESSION['user']) || !isset($_SESSION['user']['ma_nguoi_dung'])) {
+            $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Bạn cần đăng nhập để đổi mật khẩu.'];
+            header('Location: index.php?action=login');
+            exit;
+        }
+
+        $userId = $_SESSION['user']['ma_nguoi_dung'];
+        $oldPassword = $_POST['old_password'] ?? '';
+        $newPassword = $_POST['new_password'] ?? '';
+        $confirmPassword = $_POST['confirm_password'] ?? '';
+
+        if ($oldPassword === '' || $newPassword === '' || $confirmPassword === '') {
+            $_SESSION['flash'] = ['type' => 'warning', 'message' => 'Vui lòng nhập đủ thông tin.'];
+            header('Location: index.php?action=profile');
+            exit;
+        }
+
+        $changeResult = $this->userModel->changePassword($userId, $oldPassword, $newPassword, $confirmPassword);
+
+        $_SESSION['flash'] = ['type' => $changeResult['success'] ? 'success' : 'danger', 'message' => $changeResult['message']];
+        header('Location: index.php?action=profile');
         exit;
     }
 }

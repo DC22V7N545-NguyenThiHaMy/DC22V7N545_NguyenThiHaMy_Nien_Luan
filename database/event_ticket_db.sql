@@ -26,6 +26,7 @@ create table su_kien(
     ma_nguoi_tao int not null,
     ten_su_kien varchar(255) not null,
     mo_ta text,
+    hinh_anh varchar(255),
     ngay_to_chuc date not null,
     gio_to_chuc time not null,
     dia_diem varchar(255) not null,
@@ -96,3 +97,20 @@ create table thanh_toan(
     thoi_gian timestamp default current_timestamp,
     constraint fk_thanh_toan_don_hang foreign key (ma_don_hang) references don_hang(ma_don_hang)
 );
+
+-- tin tuc
+create table tin_tuc(
+	ma_tin_tuc int auto_increment primary key,
+    ma_nguoi_tao int not null,
+    tieu_de varchar(255) not null,
+    noi_dung longtext,
+    hinh_anh varchar(255),
+    trang_thai enum('nhap','da_duyet', 'da_xoa') default 'nhap',
+    ngay_tao timestamp default current_timestamp,
+    ngay_cap_nhat timestamp default current_timestamp on update current_timestamp,
+    constraint fk_tin_tuc_nguoi_tao foreign key(ma_nguoi_tao) references nguoi_dung(ma_nguoi_dung)
+);
+
+-- Insert default admin user
+INSERT INTO nguoi_dung (ho_ten, email, mat_khau, so_dien_thoai, dia_chi, vai_tro) VALUES 
+('Admin', 'admin@gmail.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '0900000000', 'Admin Office', 'quan_tri_vien');

@@ -93,4 +93,61 @@ class User {
 
         return $result->fetch_all(MYSQLI_ASSOC);
     }
+
+    /**
+     * Đổi mật khẩu người dùng.
+     *
+     * @return array ['success' => bool, 'message' => string]
+     */
+    public function changePassword($userId, $oldPassword, $newPassword, $confirmPassword) {
+        // Kiểm tra mật khẩu mới và xác nhận có khớp không
+        if ($newPassword !== $confirmPassword) {
+            return ['success' => false, 'message' => 'Mật khẩu xác nhận không khớp.'];
+        }
+
+        // Kiểm tra mật khẩu mới không được trống
+        if (empty($newPassword) || strlen($newPassword) < 6) {
+            return ['success' => false, 'message' => 'Mật khẩu mới phải có ít nhất 6 ký tự.'];
+        }
+
+        // Lấy mật khẩu hiện tại từ cơ sở dữ liệu
+        $stmt = $this->conn->prepare("SELECT mat_khau FROM nguoi_dung WHERE ma_nguoi_dung = ?");
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result->num_rows === 0) {
+            return ['success' => false, 'message' => 'Người dùng không tồn tại.'];
+        }
+
+        $user = $result->fetch_assoc();
+
+        // Xác minh mật khẩu cũ
+        if (!password_verify($oldPassword, $user['mat_khau'])) {
+            return ['success' => false, 'message' => 'Mật khẩu cũ không đúng.'];
+        }
+
+        // Kiểm tra mật khẩu mới khác mật khẩu cũ
+        if (password_verify($newPassword, $user['mat_khau'])) {
+            return ['success' => false, 'message' => 'Mật khẩu mới không được giống mật khẩu cũ.'];
+        }
+
+        // Mã hóa mật khẩu mới
+        $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+
+        // Cập nhật mật khẩu trong cơ sở dữ liệu
+        $stmt = $this->conn->prepare("UPDATE nguoi_dung SET mat_khau = ? WHERE ma_nguoi_dung = ?");
+        if (!$stmt) {
+            return ['success' => false, 'message' => 'Lỗi prepare: ' . $this->conn->error];
+        }
+
+        $stmt->bind_param("si", $hashedPassword, $userId);
+        
+        if (!$stmt->execute()) {
+            return ['success' => false, 'message' => 'Lỗi execute: ' . $stmt->error];
+        }
+
+        $stmt->close();
+        return ['success' => true, 'message' => 'Đổi mật khẩu thành công!'];
+    }
 }

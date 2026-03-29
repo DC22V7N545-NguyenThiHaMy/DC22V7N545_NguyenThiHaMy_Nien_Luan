@@ -4,6 +4,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once __DIR__ . '/../../model/User.php';
+require_once __DIR__ . '/../../model/EventTicket.php';
 
 $user = $_SESSION['user'] ?? null;
 if (!$user) {
@@ -19,8 +20,25 @@ if (($user['role'] ?? null) !== 'quan_tri_vien') {
 $flash = $_SESSION['flash'] ?? null;
 unset($_SESSION['flash']);
 
-$userModel = isset($conn) ? new User($conn) : null;
-$users = $userModel ? $userModel->getAllUsers() : [];
+$userModel        = isset($conn) ? new User($conn) : null;
+$eventTicketModel = isset($conn) ? new EventTicket($conn) : null;
+$users            = $userModel        ? $userModel->getAllUsers()    : [];
+$pendingOrders    = $eventTicketModel ? $eventTicketModel->getPendingOrders() : [];
+
+// Thống kê cho overview
+$statType  = $_GET['stat_type']  ?? 'month';
+$statValue = $_GET['stat_value'] ?? date('Y-m');
+$stats     = $eventTicketModel ? $eventTicketModel->getStatistics($statType, $statValue) : ['summary'=>[],'orders'=>[],'by_event'=>[]];
+$summary   = $stats['summary']  ?? [];
+$byEvent   = $stats['by_event'] ?? [];
+$statOrders = $stats['orders']  ?? [];
+
+$statTypeLabel = match($statType) {
+    'day'   => 'Ngày ' . date('d/m/Y', strtotime($statValue)),
+    'month' => 'Tháng ' . date('m/Y', strtotime($statValue . '-01')),
+    'year'  => 'Năm ' . $statValue,
+    default => $statValue,
+};
 ?>
 <!doctype html>
 <html lang="vi">
@@ -53,27 +71,7 @@ $users = $userModel ? $userModel->getAllUsers() : [];
 
   <div class="row g-4">
     <div class="col-lg-3">
-      <div class="th-admin-sidebar p-3">
-        <div class="d-flex align-items-center justify-content-between mb-3">
-          <div>
-            <div class="fw-semibold">Admin Panel</div>
-            <div class="text-muted small"><?= htmlspecialchars($user['name']) ?></div>
-          </div>
-          <span class="badge th-badge-soft">Admin</span>
-        </div>
-
-        <div class="nav flex-column gap-2">
-          <a class="nav-link th-admin-link active" href="#" data-admin-target="overview">Tổng quan</a>
-          <a class="nav-link th-admin-link" href="#" data-admin-target="users">Người dùng</a>
-          <a class="nav-link th-admin-link" href="#" data-admin-target="events">Sự kiện</a>
-          <a class="nav-link th-admin-link" href="#" data-admin-target="reports">Thống kê</a>
-          <a class="nav-link th-admin-link" href="#" data-admin-target="settings">Cài đặt</a>
-        </div>
-
-        <div class="border-top border-light border-opacity-10 mt-3 pt-3 small text-muted">
-          Email: <strong><?= htmlspecialchars($user['email']) ?></strong>
-        </div>
-      </div>
+      <?php require __DIR__ . '/partials/sidebar.php'; ?>
     </div>
 
     <div class="col-lg-9">
@@ -81,37 +79,209 @@ $users = $userModel ? $userModel->getAllUsers() : [];
       <section data-admin-pane="overview">
         <div class="card border-0 th-auth-card">
           <div class="card-body">
+
+            <!-- Bộ lọc thống kê -->
+            <form method="GET" action="index.php" class="d-flex flex-wrap gap-2 align-items-end mb-4">
+              <input type="hidden" name="action" value="admin">
+              <input type="hidden" name="tab" value="overview">
+              <div>
+                <label class="form-label small mb-1">Loại</label>
+                <select name="stat_type" class="form-select form-select-sm th-input-dark" onchange="syncValuePlaceholder(this)">
+                  <option value="day"   <?= $statType==='day'   ? 'selected':'' ?>>Theo ngày</option>
+                  <option value="month" <?= $statType==='month' ? 'selected':'' ?>>Theo tháng</option>
+                  <option value="year"  <?= $statType==='year'  ? 'selected':'' ?>>Theo năm</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-label small mb-1">Giá trị</label>
+                <input type="text" name="stat_value" value="<?= htmlspecialchars($statValue) ?>"
+                       class="form-control form-control-sm th-input-dark" style="width:150px"
+                       placeholder="<?= $statType==='day' ? 'vd: 2026-03-22' : ($statType==='year' ? 'vd: 2026' : 'vd: 2026-03') ?>">
+              </div>
+              <button type="submit" class="btn btn-warning btn-sm px-3">Xem</button>
+              <a href="index.php?action=export_statistics&type=<?= urlencode($statType) ?>&value=<?= urlencode($statValue) ?>"
+                 class="btn btn-success btn-sm px-3">⬇ Xuất Excel</a>
+            </form>
+
+            <div class="d-flex align-items-center justify-content-between mb-3">
+              <div>
+                <h1 class="h4 mb-0">Tổng quan — <?= htmlspecialchars($statTypeLabel) ?></h1>
+                <div class="text-muted small">Chỉ tính đơn đã xác nhận thanh toán</div>
+              </div>
+            </div>
+
+            <!-- 4 card số liệu -->
+            <div class="row g-3 mb-4">
+              <div class="col-md-3 col-6">
+                <div class="p-3 rounded-4 border border-light border-opacity-10 text-center">
+                  <div class="h4 mb-0 text-warning"><?= number_format((int)($summary['tong_don'] ?? 0)) ?></div>
+                  <div class="text-muted small mt-1">Đơn đã thanh toán</div>
+                </div>
+              </div>
+              <div class="col-md-3 col-6">
+                <div class="p-3 rounded-4 border border-light border-opacity-10 text-center">
+                  <div class="h4 mb-0 text-warning"><?= number_format((int)($summary['tong_ve'] ?? 0)) ?></div>
+                  <div class="text-muted small mt-1">Vé đã bán</div>
+                </div>
+              </div>
+              <div class="col-md-3 col-6">
+                <div class="p-3 rounded-4 border border-light border-opacity-10 text-center">
+                  <div class="h4 mb-0 text-warning"><?= count($pendingOrders) ?></div>
+                  <div class="text-muted small mt-1">Đơn chờ xác nhận</div>
+                </div>
+              </div>
+              <div class="col-md-3 col-6">
+                <div class="p-3 rounded-4 border border-light border-opacity-10 text-center">
+                  <div class="h5 mb-0 text-warning"><?= number_format((float)($summary['tong_doanh_thu'] ?? 0), 0, ',', '.') ?> đ</div>
+                  <div class="text-muted small mt-1">Doanh thu</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Doanh thu theo sự kiện -->
+            <?php if (!empty($byEvent)): ?>
+            <div class="mb-4">
+              <div class="fw-semibold small mb-2">Doanh thu theo sự kiện</div>
+              <?php
+                $maxRev = max(array_column($byEvent, 'doanh_thu')) ?: 1;
+                foreach ($byEvent as $ev):
+                  $pct = round((float)$ev['doanh_thu'] / $maxRev * 100);
+              ?>
+              <div class="mb-2">
+                <div class="d-flex justify-content-between small mb-1">
+                  <span class="text-truncate" style="max-width:60%"><?= htmlspecialchars((string)$ev['ten_su_kien']) ?></span>
+                  <span class="text-warning"><?= number_format((float)$ev['doanh_thu'], 0, ',', '.') ?> đ · <?= (int)$ev['so_ve'] ?> vé</span>
+                </div>
+                <div class="rounded-pill" style="background:rgba(255,255,255,.08);height:8px">
+                  <div class="rounded-pill" style="width:<?= $pct ?>%;height:8px;background:linear-gradient(90deg,#667eea,#f0c040)"></div>
+                </div>
+              </div>
+              <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
+
+            <!-- Bảng đơn hàng -->
+            <div class="fw-semibold small mb-2">Chi tiết đơn hàng</div>
+            <?php if (empty($statOrders)): ?>
+              <div class="text-muted small">Không có đơn hàng nào trong kỳ này.</div>
+            <?php else: ?>
+            <div class="table-responsive">
+              <table class="table table-dark table-hover align-middle mb-0" style="font-size:.83rem">
+                <thead>
+                  <tr>
+                    <th>#</th><th>Khách hàng</th><th>Chi tiết vé</th>
+                    <th class="text-end">Số tiền</th><th>Ngày</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php foreach ($statOrders as $o): ?>
+                  <tr>
+                    <td class="text-warning">#<?= (int)$o['ma_don_hang'] ?></td>
+                    <td>
+                      <div><?= htmlspecialchars((string)$o['ho_ten']) ?></div>
+                      <div class="text-muted" style="font-size:.72rem"><?= htmlspecialchars((string)$o['email']) ?></div>
+                    </td>
+                    <td class="text-muted"><?= htmlspecialchars((string)$o['chi_tiet_ve']) ?></td>
+                    <td class="text-end fw-semibold text-warning"><?= number_format((float)$o['tong_tien'], 0, ',', '.') ?> đ</td>
+                    <td class="text-muted"><?= htmlspecialchars(substr((string)$o['ngay_tao'], 0, 16)) ?></td>
+                  </tr>
+                  <?php endforeach; ?>
+                </tbody>
+                <tfoot>
+                  <tr style="border-top:1px solid rgba(255,255,255,.15)">
+                    <td colspan="3" class="fw-bold">Tổng cộng</td>
+                    <td class="text-end fw-bold text-warning"><?= number_format((float)($summary['tong_doanh_thu'] ?? 0), 0, ',', '.') ?> đ</td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <?php endif; ?>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- ORDERS (PENDING) -->
+      <section class="d-none" data-admin-pane="orders">
+        <div class="card border-0 th-auth-card">
+          <div class="card-body">
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
               <div>
-                <h1 class="h3 mb-1">Tổng quan hệ thống</h1>
-                <div class="text-muted small">Biểu đồ doanh thu & đơn hàng (demo).</div>
+                <h2 class="h4 mb-1">Thanh toán</h2>
+                <div class="text-muted small">Danh sách đơn chờ thanh toán.</div>
               </div>
-              <a class="btn btn-outline-light btn-sm rounded-pill" href="index.php?action=logout">Đăng xuất</a>
+              <span class="badge th-badge-soft"><?= count($pendingOrders) ?> đơn</span>
             </div>
 
-            <div class="row g-3 mb-3">
-              <div class="col-md-4">
-                <div class="p-3 rounded-4 border border-light border-opacity-10">
-                  <div class="text-muted small">Doanh thu tháng</div>
-                  <div class="h4 mb-0">35 triệu</div>
-                </div>
+            <!-- Filter by Date -->
+            <div class="row g-2 mb-3">
+              <div class="col-md-6">
+                <label class="form-label small">Lọc theo ngày</label>
+                <input type="text" id="filterDate" class="form-control form-control-sm th-input-dark" placeholder="dd/mm/yyyy">
               </div>
-              <div class="col-md-4">
-                <div class="p-3 rounded-4 border border-light border-opacity-10">
-                  <div class="text-muted small">Đơn hàng</div>
-                  <div class="h4 mb-0">102</div>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="p-3 rounded-4 border border-light border-opacity-10">
-                  <div class="text-muted small">Sự kiện đang bán</div>
-                  <div class="h4 mb-0">8</div>
-                </div>
+              <div class="col-md-6">
+                <label class="form-label small">Lọc theo giờ</label>
+                <input type="number" id="filterHour" min="0" max="23" class="form-control form-control-sm th-input-dark" placeholder="0-23 (không bắt buộc)">
               </div>
             </div>
+            <div class="mb-3">
+              <button onclick="filterOrders()" class="btn btn-sm btn-outline-light">Lọc đơn hàng</button>
+            </div>
 
-            <div class="p-3 rounded-4 border border-light border-opacity-10" style="height: 320px;">
-              <canvas id="adminRevenueChart"></canvas>
+            <!-- Delete All Button -->
+            <div class="mb-3">
+              <form action="index.php?action=delete_all_orders" method="POST" style="display:inline;" onsubmit="return confirm('Bạn chắc chắn muốn xóa tất cả đơn chờ thanh toán không?');">
+                <button type="submit" class="btn btn-sm btn-danger rounded-2">Xóa tất cả</button>
+              </form>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-dark table-hover align-middle mb-0" id="ordersTable">
+                <thead>
+                  <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Khách hàng</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Số tiền</th>
+                    <th scope="col">Ngày tạo</th>
+                    <th scope="col">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php if (!$pendingOrders): ?>
+                    <tr>
+                      <td colspan="6" class="text-center text-muted py-4">Không có đơn hàng nào chờ thanh toán.</td>
+                    </tr>
+                  <?php else: ?>
+                    <?php foreach ($pendingOrders as $order): ?>
+                      <tr class="order-row" data-date="<?= htmlspecialchars((string)$order['ngay_tao']) ?>">
+                        <td><?= htmlspecialchars((string)$order['ma_don_hang']) ?></td>
+                        <td><?= htmlspecialchars((string)$order['ho_ten']) ?></td>
+                        <td><?= htmlspecialchars((string)$order['email']) ?></td>
+                        <td class="fw-semibold"><?= number_format((float)$order['tong_tien']) ?> ₫</td>
+                        <td class="text-muted small"><?= htmlspecialchars((string)$order['ngay_tao']) ?></td>
+                        <td>
+                          <div class="d-flex gap-2">
+                            <form action="index.php?action=confirm_order_payment" method="POST" style="display:inline;">
+                              <input type="hidden" name="order_id" value="<?= (int)$order['ma_don_hang'] ?>">
+                              <button type="submit" class="btn btn-sm btn-success rounded-2" title="Thanh toán">
+                                <span class="small">✓</span>
+                              </button>
+                            </form>
+                            <form action="index.php?action=delete_order" method="POST" style="display:inline;" onsubmit="return confirm('Xóa đơn này không?');">
+                              <input type="hidden" name="order_id" value="<?= (int)$order['ma_don_hang'] ?>">
+                              <button type="submit" class="btn btn-sm btn-danger rounded-2" title="Xóa đơn">
+                                <span class="small">×</span>
+                              </button>
+                            </form>
+                          </div>
+                        </td>
+                      </tr>
+                    <?php endforeach; ?>
+                  <?php endif; ?>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -222,39 +392,6 @@ $users = $userModel ? $userModel->getAllUsers() : [];
         </div>
       </div>
 
-      <!-- EVENTS -->
-      <section class="d-none" data-admin-pane="events">
-        <div class="card border-0 th-auth-card">
-          <div class="card-body">
-            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-              <div>
-                <h2 class="h4 mb-1">Sự kiện</h2>
-                <div class="text-muted small">Khu vực duyệt sự kiện (demo UI).</div>
-              </div>
-              <span class="badge th-badge-soft">Events</span>
-            </div>
-
-            <div class="row g-3">
-              <div class="col-md-6">
-                <div class="p-3 rounded-4 border border-light border-opacity-10">
-                  <div class="fw-semibold">Live Concert 2026</div>
-                  <div class="text-muted small mb-2">Trạng thái: chờ duyệt</div>
-                  <button class="btn btn-outline-light btn-sm rounded-pill me-2" type="button" disabled>Duyệt</button>
-                  <button class="btn btn-outline-danger btn-sm rounded-pill" type="button" disabled>Từ chối</button>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="p-3 rounded-4 border border-light border-opacity-10">
-                  <div class="fw-semibold">Tech Conference</div>
-                  <div class="text-muted small mb-2">Trạng thái: đã duyệt</div>
-                  <button class="btn btn-outline-light btn-sm rounded-pill" type="button" disabled>Xem</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <!-- REPORTS -->
       <section class="d-none" data-admin-pane="reports">
         <div class="card border-0 th-auth-card">
@@ -317,6 +454,53 @@ $users = $userModel ? $userModel->getAllUsers() : [];
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
 <script src="/public/js/admin.js"></script>
+
+<script>
+// Filter orders by date
+function filterOrders() {
+  let dateInput = document.getElementById('filterDate')?.value || '';
+  const hourInput = document.getElementById('filterHour')?.value || '';
+
+  // Convert dd/mm/yyyy to yyyy-mm-dd if needed
+  if (dateInput && dateInput.includes('/')) {
+    const [dd, mm, yyyy] = dateInput.split('/');
+    if (dd && mm && yyyy) {
+      dateInput = `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+    }
+  }
+
+  const rows = document.querySelectorAll('#ordersTable tbody .order-row');
+  
+  rows.forEach(row => {
+    const dateTimeString = row.getAttribute('data-date') || '';
+    const dateString = dateTimeString.split(' ')[0];
+    const timeString = dateTimeString.split(' ')[1] || '';
+    const hour = timeString.split(':')[0];
+
+    let isVisible = true;
+
+    if (dateInput && dateString !== dateInput) {
+      isVisible = false;
+    }
+    
+    if (hourInput && hour !== hourInput.padStart(2, '0')) {
+      isVisible = false;
+    }
+
+    row.style.display = isVisible ? '' : 'none';
+  });
+}
+</script>
+<script>
+function syncValuePlaceholder(sel) {
+  const inp = sel.closest('form').querySelector('[name="stat_value"]');
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  if (sel.value === 'day')   { inp.value = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`; inp.placeholder = 'vd: 2026-03-22'; }
+  if (sel.value === 'month') { inp.value = `${now.getFullYear()}-${pad(now.getMonth()+1)}`; inp.placeholder = 'vd: 2026-03'; }
+  if (sel.value === 'year')  { inp.value = `${now.getFullYear()}`; inp.placeholder = 'vd: 2026'; }
+}
+</script>
 </body>
 </html>
 

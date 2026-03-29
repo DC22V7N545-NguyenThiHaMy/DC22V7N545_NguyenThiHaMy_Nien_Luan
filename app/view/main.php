@@ -1,47 +1,29 @@
 <?php
 // Main single-page view for the event ticket system.
 // This page shows the home section and the login/register forms.
+require_once __DIR__ . '/../model/EventTicket.php';
+require_once __DIR__ . '/../model/News.php';
 
 $flash = $_SESSION['flash'] ?? null;
 unset($_SESSION['flash']);
 $user = $_SESSION['user'] ?? null;
+$eventTicketModel = isset($conn) ? new EventTicket($conn) : null;
+$newsModel = isset($conn) ? new News($conn) : null;
+$homeTickets = $eventTicketModel ? $eventTicketModel->getTicketsForHome(8) : [];
+$homeNews = $newsModel ? $newsModel->getNewsForHome(6) : [];
+
+$pageTitle = 'Nền tảng bán vé sự kiện';
+$bodyClass = 'bg-landing';
+require_once __DIR__ . '/layouts/header.php';
 ?>
-<!doctype html>
-<html lang="vi">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Nền tảng bán vé sự kiện</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="/public/css/style.css" rel="stylesheet">
-</head>
-<body class="bg-landing">
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm">
-  <div class="container">
-    <a class="navbar-brand fw-bold" href="index.php"><span class="text-warning">Ticket</span>Hub</a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarNav">
-      <ul class="navbar-nav ms-auto align-items-lg-center">
-        <li class="nav-item"><a class="nav-link" href="index.php">Trang chủ</a></li>
-        <li class="nav-item"><a class="nav-link" href="#features">Tính năng</a></li>
-        <?php if ($user): ?>
-          <li class="nav-item"><a class="nav-link" href="index.php?action=profile">Tài khoản</a></li>
-          <li class="nav-item ms-lg-2"><a class="btn btn-outline-light btn-sm" href="index.php?action=logout">Đăng xuất</a></li>
-        <?php else: ?>
-          <li class="nav-item ms-lg-2"><a class="btn btn-outline-light btn-sm me-2" href="index.php?action=login">Đăng nhập</a></li>
-          <li class="nav-item"><a class="btn btn-warning btn-sm" href="index.php?action=register">Đăng ký</a></li>
-        <?php endif; ?>
-      </ul>
-    </div>
-  </div>
-</nav>
+
+
 
 <main class="container py-5">
   <?php require __DIR__ . '/partials/toast.php'; ?>
 
   <section id="home" class="py-4 th-reveal">
+    <?php $featured = $homeTickets[0] ?? null; ?>
     <div class="row align-items-center g-4">
       <div class="col-lg-6">
         <span class="badge th-hero-badge mb-2 th-floating-badge">Nền tảng bán vé sự kiện cho giới trẻ</span>
@@ -68,24 +50,34 @@ $user = $_SESSION['user'] ?? null;
           <div class="card-header bg-dark text-white">
             <div class="d-flex justify-content-between align-items-center">
               <span class="fw-semibold">Sự kiện nổi bật</span>
-              <span class="badge bg-warning text-dark">Đang mở bán</span>
+              <span class="badge bg-warning text-dark"><?= $featured ? 'Đang mở bán' : 'Chưa có sự kiện' ?></span>
             </div>
           </div>
           <div class="card-body">
-            <div class="d-flex flex-column flex-md-row gap-3">
-              <img src="https://images.unsplash.com/photo-1515165562835-c4c9e0737eaa?auto=format&fit=crop&w=900&q=80"
-                   class="img-fluid rounded object-fit-cover"
-                   alt="Sự kiện âm nhạc">
-              <div>
-                <h5 class="card-title mb-1">Live Concert 2026</h5>
-                <p class="mb-2 text-muted small">20:00 • 30/04/2026 • Nhà hát lớn</p>
-                <span class="badge bg-success mb-2">Còn vé</span>
-                <p class="card-text small">
-                  Vé thường, VIP, Backstage với mã QR được gửi ngay sau khi thanh toán.
-                </p>
-                <a href="#" class="btn btn-outline-dark btn-sm disabled">Xem chi tiết (demo)</a>
-              </div>
-            </div>
+            <?php if ($featured): ?>
+              <a href="index.php?action=ticket_detail&id=<?= (int)$featured['ma_loai_ve'] ?>" class="text-decoration-none text-reset">
+                <div class="d-flex flex-column flex-md-row gap-3">
+                  <?php if (!empty($featured['hinh_anh'])): ?>
+                    <img src="<?= htmlspecialchars((string)$featured['hinh_anh']) ?>"
+                         class="img-fluid rounded object-fit-cover"
+                         alt="<?= htmlspecialchars((string)$featured['ten_su_kien']) ?>"
+                         style="max-width: 180px; height: 160px; flex-shrink: 0;">
+                  <?php else: ?>
+                    <div class="bg-secondary rounded" style="width: 180px; height: 160px; display:flex; align-items:center; justify-content:center; color:#f8fafc; flex-shrink: 0;">
+                      <i class="fas fa-calendar-day fa-2x"></i>
+                    </div>
+                  <?php endif; ?>
+                  <div>
+                    <h5 class="card-title mb-1 text-white"><?= htmlspecialchars((string)$featured['ten_su_kien']) ?></h5>
+                    <p class="mb-2 text-muted small"><?= htmlspecialchars((string)$featured['gio_to_chuc']) ?> • <?= htmlspecialchars((string)$featured['ngay_to_chuc']) ?> • <?= htmlspecialchars((string)$featured['dia_diem']) ?></p>
+                    <span class="badge bg-success mb-2">Còn vé</span>
+                    <p class="card-text small text-light"><?= htmlspecialchars(mb_strimwidth((string)$featured['mo_ta_su_kien'], 0, 120, '...')) ?></p>
+                  </div>
+                </div>
+              </a>
+            <?php else: ?>
+              <div class="text-center text-muted py-4">Chưa có vé sự kiện đang mở bán.</div>
+            <?php endif; ?>
           </div>
         </div>
       </div>
@@ -135,17 +127,117 @@ $user = $_SESSION['user'] ?? null;
     </div>
   </section>
 
+  <section id="tickets" class="py-4 th-reveal">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="fw-bold mb-0">Vé đang mở bán</h2>
+      <a href="index.php?action=events" class="btn btn-outline-light btn-sm">Xem tất cả →</a>
+    </div>
+    <div class="row g-4">
+      <?php if (!$homeTickets): ?>
+        <div class="col-12">
+          <div class="alert alert-dark border border-light border-opacity-10 mb-0">
+            Chưa có vé nào. Admin cần thêm danh mục, sự kiện và loại vé ở trang quản trị.
+          </div>
+        </div>
+      <?php else: ?>
+        <?php foreach ($homeTickets as $ticket): ?>
+          <div class="col-md-6 col-xl-3">
+            <div class="card h-100 border-0 th-card-feature" style="overflow: hidden; border-radius: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.12); transition: all 0.3s ease; cursor: pointer;">
+              <!-- Image Section -->
+              <div style="position: relative; height: 200px; overflow: hidden; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <?php if (!empty($ticket['hinh_anh'])): ?>
+                  <img src="<?= htmlspecialchars((string)$ticket['hinh_anh']) ?>" alt="Event" style="width: 100%; height: 100%; object-fit: cover;">
+                <?php else: ?>
+                  <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.7); font-size: 48px;">🎫</div>
+                <?php endif; ?>
+                <!-- Badge Overlay -->
+                <div style="position: absolute; top: 10px; right: 10px;">
+                  <span class="badge" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 8px 12px; font-weight: 600;"><?= (int)$ticket['so_luong_con'] ?> vé</span>
+                </div>
+              </div>
+
+              <!-- Content Section -->
+              <div class="card-body" style="display: flex; flex-direction: column; height: 100%;">
+                <!-- Category Badge -->
+                <span class="badge" style="width: fit-content; background: rgba(102, 126, 234, 0.1); color: #667eea; padding: 6px 12px; margin-bottom: 12px; border-radius: 20px; font-weight: 600; font-size: 11px; text-transform: uppercase;"><?= htmlspecialchars((string)$ticket['ten_danh_muc']) ?></span>
+
+                <!-- Event Name -->
+                <h6 class="fw-bold mb-1" style="font-size: 18px; color: #fff; line-height: 1.4; flex-grow: 1;"><?= htmlspecialchars((string)$ticket['ten_su_kien']) ?></h6>
+
+                <!-- Ticket Type -->
+                <div class="small" style="color: #ffd700; font-weight: 600; margin-bottom: 12px;">🎟️ <?= htmlspecialchars((string)$ticket['ten_loai_ve']) ?></div>
+
+                <!-- Price & Button -->
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <div class="fw-bold" style="font-size: 18px; color: #ffd700;"><?= number_format((float)$ticket['gia_ve'], 0, ',', '.') ?> đ</div>
+                  <a class="btn btn-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; padding: 6px 12px; font-weight: 600; font-size: 12px; transition: all 0.3s ease;" href="index.php?action=ticket_detail&id=<?= (int)$ticket['ma_loai_ve'] ?>">Chi tiết</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        <?php endforeach; ?>
+      <?php endif; ?>
+    </div>
+  </section>
+
+  <section id="news" class="py-4 th-reveal">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="fw-bold mb-0">Tin tức mới nhất</h2>
+      <a href="index.php?action=news" class="btn btn-outline-light btn-sm">Xem tất cả →</a>
+    </div>
+    <div class="row g-4">
+      <?php if (!$homeNews): ?>
+        <div class="col-12">
+          <div class="alert alert-dark border border-light border-opacity-10 mb-0">
+            Chưa có tin tức nào. Admin sẽ cập nhật tin tức mới nhất.
+          </div>
+        </div>
+      <?php else: ?>
+        <?php foreach ($homeNews as $news): ?>
+          <div class="col-md-6 col-xl-4">
+            <div class="card h-100 border-0 th-card-feature" style="overflow: hidden; border-radius: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.12); transition: all 0.3s ease; background: #ffffff !important;">
+              <!-- Image Section -->
+              <div style="position: relative; height: 200px; overflow: hidden; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <?php if (!empty($news['hinh_anh'])): ?>
+                  <img src="<?= htmlspecialchars((string)$news['hinh_anh']) ?>" alt="News" style="width: 100%; height: 100%; object-fit: cover;">
+                <?php else: ?>
+                  <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.7); font-size: 48px;">📰</div>
+                <?php endif; ?>
+              </div>
+
+              <!-- Content Section -->
+              <div class="card-body" style="display: flex; flex-direction: column; height: 100%; background: #ffffff !important;">
+                <!-- Title -->
+                <h6 class="fw-bold mb-2" style="font-size: 16px; color: #000 !important; line-height: 1.4;">
+                  <?= htmlspecialchars((string)$news['tieu_de']) ?>
+                </h6>
+
+                <!-- Meta Info -->
+                <div class="small" style="color: #333 !important; font-weight: 600; margin-bottom: 8px;">
+                  👤 <?= htmlspecialchars((string)$news['ten_nguoi_tao']) ?> • 📅 <?= date('d/m/Y', strtotime($news['ngay_tao'])) ?>
+                </div>
+
+                <!-- Excerpt -->
+                <p class="small" style="color: #222 !important; margin-bottom: 12px; flex-grow: 1; line-height: 1.5;">
+                  <?= htmlspecialchars(substr(strip_tags((string)$news['noi_dung']), 0, 120)) ?>...
+                </p>
+
+                <!-- Read More Button -->
+                <div>
+                  <a class="btn btn-sm w-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; padding: 8px 12px; font-weight: 600; font-size: 12px; transition: all 0.3s ease;" href="index.php?action=news_detail&id=<?= (int)$news['ma_tin_tuc'] ?>">
+                    <i class="fas fa-newspaper me-1"></i>Đọc thêm
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        <?php endforeach; ?>
+      <?php endif; ?>
+    </div>
+  </section>
+
   <!-- Nếu cần, có thể hiển thị một đoạn giới thiệu ngắn khi người dùng đã đăng nhập -->
 </main>
 
-<footer class="border-top py-3 mt-4 bg-white">
-  <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center small text-muted">
-    <span>© <?= date('Y') ?> TicketHub – Hệ thống bán vé sự kiện.</span>
-    <span>Đồ án môn Niên Luận.</span>
-  </div>
-</footer>
+<?php require_once __DIR__ . '/layouts/footer.php'; ?>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
-<script src="/public/js/app.js"></script>
-</body>
-</html>
