@@ -8,8 +8,6 @@ $bodyClass = 'th-page-gradient';
 require_once __DIR__ . '/../layouts/header.php';
 ?>
 
-
-
 <div class="container py-5">
   <div class="row justify-content-center">
     <div class="col-md-7 col-lg-5">
@@ -24,6 +22,7 @@ require_once __DIR__ . '/../layouts/header.php';
           </div>
 
           <form action="index.php?action=register" method="POST" autocomplete="off">
+                <?= csrf_field() ?>
             <div class="mb-3">
               <label class="form-label th-form-label" for="fullName">Họ và tên</label>
               <input class="form-control th-input-dark" type="text" id="fullName" name="full_name" required placeholder="Nguyễn Văn A">
@@ -34,7 +33,7 @@ require_once __DIR__ . '/../layouts/header.php';
             </div>
             <div class="mb-3">
               <label class="form-label th-form-label" for="phone">Số điện thoại</label>
-              <input class="form-control th-input-dark" type="tel" id="phone" name="phone" placeholder="VD: 0901234567" pattern="^0\d{9}$" title="SĐT phải có 10 số và bắt đầu bằng 0 (VD: 0901234567)">
+              <input class="form-control th-input-dark" type="tel" id="phone" name="phone" placeholder="VD: 0901234567" pattern="^0\d{9}$" title="SĐT phải có 10 số và bắt đầu bằng 0 (VD: 0123456789)">
             </div>
             <div class="mb-3">
               <label class="form-label th-form-label" for="address">Địa chỉ</label>

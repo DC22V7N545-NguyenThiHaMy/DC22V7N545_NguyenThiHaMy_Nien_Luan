@@ -8,8 +8,6 @@ $bodyClass = 'th-page-gradient';
 require_once __DIR__ . '/../layouts/header.php';
 ?>
 
-
-
 <div class="container py-5">
   <div class="row justify-content-center">
     <div class="col-md-6 col-lg-4">
@@ -24,6 +22,7 @@ require_once __DIR__ . '/../layouts/header.php';
           </div>
 
           <form action="index.php?action=login" method="POST" autocomplete="off">
+                <?= csrf_field() ?>
             <div class="mb-3">
               <label class="form-label th-form-label" for="loginEmail">Email</label>
               <input class="form-control th-input-dark" type="email" id="loginEmail" name="email" required placeholder="you@example.com">
