@@ -398,6 +398,7 @@ require_once __DIR__ . '/layouts/header.php';
             </div>
 
             <form method="POST" id="buy_form">
+                <?= csrf_field() ?>
               <input type="hidden" name="action" value="buy_ticket">
               <input type="hidden" name="ma_loai_ve" value="<?= (int)$ticket['ma_loai_ve'] ?>">
               <input type="hidden" name="so_luong" id="buy_quantity">
@@ -405,6 +406,7 @@ require_once __DIR__ . '/layouts/header.php';
             </form>
 
             <form method="POST" action="index.php" style="margin-top: 10px;" id="cart_form">
+                <?= csrf_field() ?>
               <input type="hidden" name="action" value="add_to_cart">
               <input type="hidden" name="ma_loai_ve" value="<?= (int)$ticket['ma_loai_ve'] ?>">
               <input type="hidden" name="so_luong" id="cart_quantity">

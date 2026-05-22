@@ -13,9 +13,12 @@ $ticketTypes = $eventTicketModel ? $eventTicketModel->getTicketTypesForAdmin() :
 // Filter by category if provided
 $selectedCategory = (int)($_GET['category'] ?? 0);
 $searchQuery = trim($_GET['search'] ?? '');
+$fromDate = trim($_GET['from_date'] ?? '');
+$toDate = trim($_GET['to_date'] ?? '');
 
 $filteredEvents = [];
 foreach ($events as $ev) {
+    if (($ev['trang_thai'] ?? '') !== 'da_duyet') continue;
     $matchCategory = !$selectedCategory || (int)$ev['ma_danh_muc'] === $selectedCategory;
     
     // Search by event name or ticket type name
@@ -35,7 +38,16 @@ foreach ($events as $ev) {
         $matchSearch = $matchEventName || $matchTicketType;
     }
     
-    if ($matchCategory && $matchSearch) {
+    // Filter by Date
+    $matchDate = true;
+    if ($fromDate && $ev['ngay_to_chuc'] < $fromDate) {
+        $matchDate = false;
+    }
+    if ($toDate && $ev['ngay_to_chuc'] > $toDate) {
+        $matchDate = false;
+    }
+    
+    if ($matchCategory && $matchSearch && $matchDate) {
         $filteredEvents[] = $ev;
     }
 }
@@ -52,15 +64,24 @@ require_once __DIR__ . '/layouts/header.php';
 
   <section class="mb-5">
     <div class="row align-items-center g-4 mb-4">
-      <div class="col-lg-8">
+      <div class="col-lg-4">
         <h1 class="display-6 fw-bold mb-2">Khám phá sự kiện</h1>
         <p class="text-muted">Tìm và đặt vé cho các sự kiện hấp dẫn</p>
       </div>
-      <div class="col-lg-4">
-        <form method="GET" class="d-flex gap-2">
+      <div class="col-lg-8">
+        <form method="GET" class="d-flex flex-wrap gap-2 justify-content-lg-end">
           <input type="hidden" name="action" value="events">
-          <input type="text" name="search" class="form-control" placeholder="Tìm kiếm sự kiện..." value="<?= htmlspecialchars($searchQuery) ?>">
-          <button type="submit" class="btn btn-th-primary">🔍</button>
+          
+          <!-- Lọc theo ngày -->
+          <input type="date" name="from_date" class="form-control" style="width: 140px;" value="<?= htmlspecialchars($fromDate) ?>" title="Từ ngày">
+          <span class="d-flex align-items-center mb-0 text-muted">-</span>
+          <input type="date" name="to_date" class="form-control" style="width: 140px;" value="<?= htmlspecialchars($toDate) ?>" title="Đến ngày">
+          
+          <!-- Lọc theo tên -->
+          <input type="text" name="search" class="form-control" style="max-width: 220px;" placeholder="Tìm kiếm sự kiện..." value="<?= htmlspecialchars($searchQuery) ?>">
+          <button type="submit" class="btn btn-th-primary">
+            <i class="fas fa-filter"></i> Lọc
+          </button>
         </form>
       </div>
     </div>
@@ -69,9 +90,9 @@ require_once __DIR__ . '/layouts/header.php';
     <div class="mb-4">
       <div class="d-flex flex-wrap gap-2 align-items-center">
         <span class="text-muted small">Lọc theo danh mục:</span>
-        <a href="index.php?action=events" class="btn btn-sm <?= !$selectedCategory ? 'btn-th-primary' : 'btn-outline-light' ?> rounded-pill">Tất cả</a>
+        <a href="index.php?action=events<?= $searchQuery ? '&search='.urlencode($searchQuery) : '' ?><?= $fromDate ? '&from_date='.urlencode($fromDate) : '' ?><?= $toDate ? '&to_date='.urlencode($toDate) : '' ?>" class="btn btn-sm <?= !$selectedCategory ? 'btn-th-primary' : 'btn-outline-light' ?> rounded-pill">Tất cả</a>
         <?php foreach ($categories as $cat): ?>
-          <a href="index.php?action=events&category=<?= (int)$cat['ma_danh_muc'] ?>&search=<?= urlencode($searchQuery) ?>" 
+          <a href="index.php?action=events&category=<?= (int)$cat['ma_danh_muc'] ?>&search=<?= urlencode($searchQuery) ?>&from_date=<?= urlencode($fromDate) ?>&to_date=<?= urlencode($toDate) ?>" 
              class="btn btn-sm <?= ($selectedCategory === (int)$cat['ma_danh_muc']) ? 'btn-th-primary' : 'btn-outline-light' ?> rounded-pill">
             <?= htmlspecialchars((string)$cat['ten_danh_muc']) ?>
           </a>
@@ -172,7 +193,7 @@ require_once __DIR__ . '/layouts/header.php';
                     <div class="progress" style="height: 6px; background: #eee;">
                       <div class="progress-bar" role="progressbar" style="width: <?= round(($ticketsSold / $ticketsTotal) * 100) ?>%; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);"></div>
                     </div>
-                    <small class="text-muted d-block mt-1"><?= $ticketsSold ?>/<?= $ticketsTotal ?> vé đã bán</small>
+                    <small class="text-muted d-block mt-1"><?= e($ticketsSold) ?>/<?= e($ticketsTotal) ?> vé đã bán</small>
                   </div>
                 <?php endif; ?>
 
