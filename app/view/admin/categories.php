@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -10,7 +10,7 @@ if (!$user) {
     header('Location: index.php?action=login');
     exit;
 }
-if (($user['role'] ?? null) !== 'quan_tri_vien') {
+if (!in_array($user['role'] ?? null, ['quan_tri_vien', 'nhan_vien'], true)) {
     $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Bạn không có quyền truy cập trang quản trị.'];
     header('Location: index.php');
     exit;
@@ -55,6 +55,7 @@ $categories = $eventTicketModel ? $eventTicketModel->getCategories() : [];
           </div>
           <div class="collapse" id="createCategoryBox">
             <form action="index.php?action=create_category" method="POST" class="row g-3" onsubmit="return confirm('Xác nhận thêm danh mục mới?');">
+                <?= csrf_field() ?>
               <div class="col-md-5">
                 <label class="form-label th-form-label">Tên danh mục</label>
                 <input type="text" class="form-control th-input-dark" name="name" required placeholder="VD: Âm nhạc">
@@ -91,21 +92,23 @@ $categories = $eventTicketModel ? $eventTicketModel->getCategories() : [];
                   <?php foreach ($categories as $c): ?>
                     <?php $id = (int)$c['ma_danh_muc']; ?>
                     <tr>
-                      <td><?= $id ?></td>
+                      <td><?= e($id) ?></td>
                       <td><?= htmlspecialchars((string)$c['ten_danh_muc']) ?></td>
                       <td><?= htmlspecialchars((string)($c['mo_ta'] ?? '')) ?></td>
                       <td class="text-end">
-                        <button class="btn btn-sm btn-outline-warning me-1" type="button" data-bs-toggle="collapse" data-bs-target="#editCategory<?= $id ?>" aria-expanded="false">Sửa</button>
+                        <button class="btn btn-sm btn-outline-warning me-1" type="button" data-bs-toggle="collapse" data-bs-target="#editCategory<?= e($id) ?>" aria-expanded="false">Sửa</button>
                         <form action="index.php?action=delete_category" method="POST" class="d-inline" onsubmit="return confirm('Bạn chắc chắn muốn xóa danh mục này?');">
-                          <input type="hidden" name="ma_danh_muc" value="<?= $id ?>">
+                <?= csrf_field() ?>
+                          <input type="hidden" name="ma_danh_muc" value="<?= e($id) ?>">
                           <button class="btn btn-sm btn-outline-danger" type="submit">Xóa</button>
                         </form>
                       </td>
                     </tr>
-                    <tr class="collapse" id="editCategory<?= $id ?>">
+                    <tr class="collapse" id="editCategory<?= e($id) ?>">
                       <td colspan="4" class="bg-dark">
                         <form action="index.php?action=update_category" method="POST" class="row g-2 p-2">
-                          <input type="hidden" name="ma_danh_muc" value="<?= $id ?>">
+                <?= csrf_field() ?>
+                          <input type="hidden" name="ma_danh_muc" value="<?= e($id) ?>">
                           <div class="col-md-4">
                             <label class="form-label th-form-label mb-1">Tên danh mục</label>
                             <input type="text" class="form-control form-control-sm th-input-dark" name="name" value="<?= htmlspecialchars((string)$c['ten_danh_muc']) ?>" required>
@@ -116,7 +119,7 @@ $categories = $eventTicketModel ? $eventTicketModel->getCategories() : [];
                           </div>
                           <div class="col-md-3 text-end">
                             <button class="btn btn-sm btn-warning me-1" type="submit" onclick="return confirm('Xác nhận cập nhật danh mục này?');">Lưu</button>
-                            <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#editCategory<?= $id ?>">Đóng</button>
+                            <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#editCategory<?= e($id) ?>">Đóng</button>
                           </div>
                         </form>
                       </td>

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -10,7 +10,7 @@ if (!$user) {
     header('Location: index.php?action=login');
     exit;
 }
-if (($user['role'] ?? null) !== 'quan_tri_vien') {
+if (!in_array($user['role'] ?? null, ['quan_tri_vien', 'nhan_vien'], true)) {
     $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Bạn không có quyền truy cập trang quản trị.'];
     header('Location: index.php');
     exit;
@@ -59,6 +59,7 @@ $ticketTypes = $eventTicketModel ? $eventTicketModel->getTicketTypesForAdmin() :
               </div>
               <div class="collapse" id="createTicketBox">
                 <form action="index.php?action=create_ticket_type" method="POST" class="row g-2" onsubmit="return confirm('Xác nhận thêm loại vé mới?');">
+                <?= csrf_field() ?>
                   <div class="col-12">
                     <label class="form-label th-form-label mb-1">Sự kiện</label>
                     <select class="form-select th-input-dark" name="ma_su_kien" required>
@@ -124,20 +125,22 @@ $ticketTypes = $eventTicketModel ? $eventTicketModel->getTicketTypesForAdmin() :
                         <span class="badge bg-info"><?= (int)$t['so_luong_con'] ?></span>
                       </td>
                       <td>
-                        <span class="badge bg-success"><?= $soldCount ?></span>
+                        <span class="badge bg-success"><?= e($soldCount) ?></span>
                       </td>
                       <td class="text-end">
-                        <button class="btn btn-sm btn-outline-warning me-1" type="button" data-bs-toggle="collapse" data-bs-target="#editTicket<?= $id ?>" aria-expanded="false">Sửa</button>
+                        <button class="btn btn-sm btn-outline-warning me-1" type="button" data-bs-toggle="collapse" data-bs-target="#editTicket<?= e($id) ?>" aria-expanded="false">Sửa</button>
                         <form action="index.php?action=delete_ticket_type" method="POST" class="d-inline" onsubmit="return confirm('Bạn chắc chắn muốn xóa loại vé này?');">
-                          <input type="hidden" name="ma_loai_ve" value="<?= $id ?>">
+                <?= csrf_field() ?>
+                          <input type="hidden" name="ma_loai_ve" value="<?= e($id) ?>">
                           <button class="btn btn-sm btn-outline-danger" type="submit">Xóa</button>
                         </form>
                       </td>
                     </tr>
-                    <tr class="collapse" id="editTicket<?= $id ?>">
+                    <tr class="collapse" id="editTicket<?= e($id) ?>">
                       <td colspan="9" class="bg-dark">
                         <form action="index.php?action=update_ticket_type" method="POST" class="row g-2 p-2">
-                          <input type="hidden" name="ma_loai_ve" value="<?= $id ?>">
+                <?= csrf_field() ?>
+                          <input type="hidden" name="ma_loai_ve" value="<?= e($id) ?>">
                           <div class="col-md-3">
                             <label class="form-label th-form-label mb-1">Tên loại vé</label>
                             <input type="text" class="form-control form-control-sm th-input-dark" name="ten_loai_ve" value="<?= htmlspecialchars((string)$t['ten_loai_ve']) ?>" required>
@@ -156,7 +159,7 @@ $ticketTypes = $eventTicketModel ? $eventTicketModel->getTicketTypesForAdmin() :
                           </div>
                           <div class="col-md-3 text-end">
                             <button class="btn btn-sm btn-warning me-1" type="submit" onclick="return confirm('Xác nhận cập nhật loại vé này?');">Lưu</button>
-                            <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#editTicket<?= $id ?>">Đóng</button>
+                            <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#editTicket<?= e($id) ?>">Đóng</button>
                           </div>
                         </form>
                       </td>
@@ -175,4 +178,3 @@ $ticketTypes = $eventTicketModel ? $eventTicketModel->getTicketTypesForAdmin() :
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
 </body>
 </html>
-

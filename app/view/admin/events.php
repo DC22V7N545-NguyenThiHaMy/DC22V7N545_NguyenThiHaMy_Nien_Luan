@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -10,7 +10,7 @@ if (!$user) {
     header('Location: index.php?action=login');
     exit;
 }
-if (($user['role'] ?? null) !== 'quan_tri_vien') {
+if (!in_array($user['role'] ?? null, ['quan_tri_vien', 'nhan_vien'], true)) {
     $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Bạn không có quyền truy cập trang quản trị.'];
     header('Location: index.php');
     exit;
@@ -59,6 +59,7 @@ $ticketTypes = $eventTicketModel ? $eventTicketModel->getTicketTypesForAdmin() :
           </div>
           <div class="collapse" id="createEventBox">
             <form action="index.php?action=create_event" method="POST" enctype="multipart/form-data" class="row g-2" onsubmit="return confirm('Xác nhận tạo sự kiện mới?');">
+                <?= csrf_field() ?>
               <div class="col-12">
                 <label class="form-label th-form-label mb-1">Danh mục</label>
                 <select class="form-select th-input-dark" name="ma_danh_muc" required>
@@ -141,12 +142,12 @@ $ticketTypes = $eventTicketModel ? $eventTicketModel->getTicketTypesForAdmin() :
                   <th>Ngày giờ</th>
                   <th>Địa điểm</th>
                   <th style="width: 12%;">Vé</th>
-                  <th class="text-end" style="width: 12%;">Thao tác</th>
+                  <th class="text-start" style="width: 10%;">Trạng thái</th><th class="text-end" style="width: 15%;">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
                 <?php if (!$events): ?>
-                  <tr><td colspan="7" class="text-center text-muted py-4">Chưa có sự kiện nào.</td></tr>
+                  <tr><td colspan="8" class="text-center text-muted py-4">Chưa có sự kiện nào.</td></tr>
                 <?php else: ?>
                   <?php foreach ($events as $ev): ?>
                     <?php $eventId = (int)$ev['ma_su_kien']; ?>
@@ -176,21 +177,39 @@ $ticketTypes = $eventTicketModel ? $eventTicketModel->getTicketTypesForAdmin() :
                       </td>
                       <td><?= htmlspecialchars((string)$ev['dia_diem']) ?></td>
                       <td>
-                        <small class="badge bg-success"><?= $ticketsSold ?> bán</small><br>
-                        <small class="badge bg-info"><?= $ticketsRemaining ?> còn</small>
+                        <small class="badge bg-success"><?= e($ticketsSold) ?> bán</small><br>
+                        <small class="badge bg-info"><?= e($ticketsRemaining) ?> còn</small>
                       </td>
-                      <td class="text-end">
-                        <button class="btn btn-sm btn-outline-warning me-1" type="button" data-bs-toggle="collapse" data-bs-target="#editEvent<?= $eventId ?>" aria-expanded="false">Sửa</button>
+                      <td>
+  <?php if (($ev['trang_thai'] ?? '') === 'da_duyet'): ?>
+    <span class="badge bg-success">Đã duyệt</span>
+  <?php elseif (($ev['trang_thai'] ?? '') === 'cho_duyet'): ?>
+    <span class="badge bg-warning text-dark">Chờ duyệt</span>
+  <?php else: ?>
+    <span class="badge bg-secondary"><?= htmlspecialchars((string)($ev['trang_thai'] ?? '')) ?></span>
+  <?php endif; ?>
+</td>
+<td class="text-end">
+  <?php if (($user['role'] ?? '') === 'quan_tri_vien' && ($ev['trang_thai'] ?? '') === 'cho_duyet'): ?>
+    <form action="index.php?action=approve_event" method="POST" class="d-inline" onsubmit="return confirm('Xác nhận duyệt sự kiện này?');">
+      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '') ?>">
+      <input type="hidden" name="ma_su_kien" value="<?= $eventId ?>">
+      <button class="btn btn-sm btn-success me-1" type="submit">Duyệt</button>
+    </form>
+  <?php endif; ?>
+                        <button class="btn btn-sm btn-outline-warning me-1" type="button" data-bs-toggle="collapse" data-bs-target="#editEvent<?= e($eventId) ?>" aria-expanded="false">Sửa</button>
                         <form action="index.php?action=delete_event" method="POST" class="d-inline" onsubmit="return confirm('Bạn chắc chắn muốn xóa sự kiện này?');">
-                          <input type="hidden" name="ma_su_kien" value="<?= $eventId ?>">
+                <?= csrf_field() ?>
+                          <input type="hidden" name="ma_su_kien" value="<?= e($eventId) ?>">
                           <button class="btn btn-sm btn-outline-danger" type="submit">Xóa</button>
                         </form>
                       </td>
                     </tr>
-                    <tr class="collapse" id="editEvent<?= $eventId ?>">
-                      <td colspan="7" class="bg-dark">
+                    <tr class="collapse" id="editEvent<?= e($eventId) ?>">
+                      <td colspan="8" class="bg-dark">
                         <form action="index.php?action=update_event" method="POST" enctype="multipart/form-data" class="row g-2 p-2">
-                          <input type="hidden" name="ma_su_kien" value="<?= $eventId ?>">
+                <?= csrf_field() ?>
+                          <input type="hidden" name="ma_su_kien" value="<?= e($eventId) ?>">
                           <input type="hidden" name="current_hinh_anh" value="<?= htmlspecialchars((string)($ev['hinh_anh'] ?? '')) ?>">
                           <div class="col-md-3">
                             <label class="form-label th-form-label mb-1">Danh mục</label>
@@ -221,8 +240,8 @@ $ticketTypes = $eventTicketModel ? $eventTicketModel->getTicketTypesForAdmin() :
                           <div class="col-md-6">
                             <label class="form-label th-form-label mb-1">Ảnh mới (không bắt buộc)</label>
                             <input type="file" class="form-control form-control-sm th-input-dark" name="hinh_anh" accept="image/*" onchange="previewUpdateImage(event)">
-                            <div id="imagePreviewUpdate<?= $eventId ?>" style="margin-top: 8px; display:none;">
-                              <img id="previewImageUpdate<?= $eventId ?>" src="" alt="Preview" style="max-width: 100%; max-height: 100px; border-radius: 4px;">
+                            <div id="imagePreviewUpdate<?= e($eventId) ?>" style="margin-top: 8px; display:none;">
+                              <img id="previewImageUpdate<?= e($eventId) ?>" src="" alt="Preview" style="max-width: 100%; max-height: 100px; border-radius: 4px;">
                             </div>
                             <?php if (!empty($ev['hinh_anh'])): ?>
                               <small class="text-muted d-block mt-2">Ảnh hiện tại:</small>
@@ -235,7 +254,7 @@ $ticketTypes = $eventTicketModel ? $eventTicketModel->getTicketTypesForAdmin() :
                           </div>
                           <div class="col-12 text-end">
                             <button class="btn btn-sm btn-warning me-1" type="submit" onclick="return confirm('Xác nhận cập nhật sự kiện này?');">Lưu</button>
-                            <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#editEvent<?= $eventId ?>">Đóng</button>
+                            <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#editEvent<?= e($eventId) ?>">Đóng</button>
                           </div>
                         </form>
                       </td>
@@ -314,7 +333,7 @@ function filterEvents() {
         if (!existingMsg) {
             const tr = document.createElement('tr');
             tr.className = 'no-results';
-            tr.innerHTML = '<td colspan="7" class="text-center text-muted py-4">Không tìm thấy sự kiện nào phù hợp.</td>';
+            tr.innerHTML = '<td colspan="8" class="text-center text-muted py-4">Không tìm thấy sự kiện nào phù hợp.</td>';
             tbody.appendChild(tr);
         }
     } else {

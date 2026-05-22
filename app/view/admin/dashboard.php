@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -11,7 +11,7 @@ if (!$user) {
     header('Location: index.php?action=login');
     exit;
 }
-if (($user['role'] ?? null) !== 'quan_tri_vien') {
+if (!in_array($user['role'] ?? null, ['quan_tri_vien', 'nhan_vien'], true)) {
     $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Bạn không có quyền truy cập trang quản trị.'];
     header('Location: index.php');
     exit;
@@ -153,7 +153,7 @@ $statTypeLabel = match($statType) {
                   <span class="text-warning"><?= number_format((float)$ev['doanh_thu'], 0, ',', '.') ?> đ · <?= (int)$ev['so_ve'] ?> vé</span>
                 </div>
                 <div class="rounded-pill" style="background:rgba(255,255,255,.08);height:8px">
-                  <div class="rounded-pill" style="width:<?= $pct ?>%;height:8px;background:linear-gradient(90deg,#667eea,#f0c040)"></div>
+                  <div class="rounded-pill" style="width:<?= e($pct) ?>%;height:8px;background:linear-gradient(90deg,#667eea,#f0c040)"></div>
                 </div>
               </div>
               <?php endforeach; ?>
@@ -232,6 +232,7 @@ $statTypeLabel = match($statType) {
             <!-- Delete All Button -->
             <div class="mb-3">
               <form action="index.php?action=delete_all_orders" method="POST" style="display:inline;" onsubmit="return confirm('Bạn chắc chắn muốn xóa tất cả đơn chờ thanh toán không?');">
+                <?= csrf_field() ?>
                 <button type="submit" class="btn btn-sm btn-danger rounded-2">Xóa tất cả</button>
               </form>
             </div>
@@ -264,12 +265,14 @@ $statTypeLabel = match($statType) {
                         <td>
                           <div class="d-flex gap-2">
                             <form action="index.php?action=confirm_order_payment" method="POST" style="display:inline;">
+                <?= csrf_field() ?>
                               <input type="hidden" name="order_id" value="<?= (int)$order['ma_don_hang'] ?>">
                               <button type="submit" class="btn btn-sm btn-success rounded-2" title="Thanh toán">
                                 <span class="small">✓</span>
                               </button>
                             </form>
                             <form action="index.php?action=delete_order" method="POST" style="display:inline;" onsubmit="return confirm('Xóa đơn này không?');">
+                <?= csrf_field() ?>
                               <input type="hidden" name="order_id" value="<?= (int)$order['ma_don_hang'] ?>">
                               <button type="submit" class="btn btn-sm btn-danger rounded-2" title="Xóa đơn">
                                 <span class="small">×</span>
@@ -287,7 +290,8 @@ $statTypeLabel = match($statType) {
         </div>
       </section>
 
-      <!-- USERS -->
+      <!-- USERS (Chỉ Admin) -->
+      <?php if (($user['role'] ?? null) === 'quan_tri_vien'): ?>
       <section class="d-none" data-admin-pane="users">
         <div class="card border-0 th-auth-card">
           <div class="card-body">
@@ -315,12 +319,13 @@ $statTypeLabel = match($statType) {
                     <th scope="col">Địa chỉ</th>
                     <th scope="col">Vai trò</th>
                     <th scope="col">Ngày tạo</th>
+                    <th scope="col" class="text-end">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
                   <?php if (!$users): ?>
                     <tr>
-                      <td colspan="7" class="text-center text-muted py-4">Chưa có người dùng nào trong hệ thống.</td>
+                      <td colspan="8" class="text-center text-muted py-4">Chưa có người dùng nào trong hệ thống.</td>
                     </tr>
                   <?php else: ?>
                     <?php foreach ($users as $u): ?>
@@ -336,9 +341,23 @@ $statTypeLabel = match($statType) {
                             $label = $r === 'quan_tri_vien' ? 'Admin' : ($r === 'nhan_vien' ? 'Nhân viên' : 'Khách hàng');
                             $badge = $r === 'quan_tri_vien' ? 'danger' : ($r === 'nhan_vien' ? 'info' : 'secondary');
                           ?>
-                          <span class="badge bg-<?= $badge ?>"><?= htmlspecialchars($label) ?></span>
+                          <span class="badge bg-<?= e($badge) ?>"><?= htmlspecialchars($label) ?></span>
                         </td>
                         <td class="text-muted small"><?= htmlspecialchars((string)($u['ngay_tao'] ?? '')) ?></td>
+                        <td class="text-end">
+                          <div class="d-flex gap-2 justify-content-end">
+                            <button class="btn btn-sm btn-outline-info rounded-2" title="Sửa" onclick="openEditUserModal(<?= htmlspecialchars(json_encode($u)) ?>)">
+                              <span class="small">✎</span>
+                            </button>
+                            <form action="index.php?action=delete_user" method="POST" style="display:inline;" onsubmit="return confirm('Bạn có chắc chắn muốn xóa người dùng này không?');">
+                <?= csrf_field() ?>
+                              <input type="hidden" name="user_id" value="<?= (int)$u['ma_nguoi_dung'] ?>">
+                              <button type="submit" class="btn btn-sm btn-danger rounded-2" title="Xóa">
+                                <span class="small">×</span>
+                              </button>
+                            </form>
+                          </div>
+                        </td>
                       </tr>
                     <?php endforeach; ?>
                   <?php endif; ?>
@@ -359,6 +378,7 @@ $statTypeLabel = match($statType) {
             </div>
             <div class="modal-body">
               <form action="index.php?action=create_user" method="POST" autocomplete="off" class="row g-3">
+                <?= csrf_field() ?>
                 <div class="col-12">
                   <label class="form-label th-form-label" for="createFullName">Họ và tên</label>
                   <input class="form-control th-input-dark" type="text" id="createFullName" name="full_name" required placeholder="Nguyễn Văn B">
@@ -391,6 +411,57 @@ $statTypeLabel = match($statType) {
           </div>
         </div>
       </div>
+
+      <!-- Edit User Modal -->
+      <div class="modal fade" id="editUserModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content bg-dark text-light border border-light border-opacity-10 rounded-4">
+            <div class="modal-header border-0">
+              <h5 class="modal-title">Cập nhật người dùng</h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <form action="index.php?action=update_user" method="POST" autocomplete="off" class="row g-3">
+                <?= csrf_field() ?>
+                <input type="hidden" id="editUserId" name="user_id" value="">
+                <div class="col-12">
+                  <label class="form-label th-form-label" for="editFullName">Họ và tên</label>
+                  <input class="form-control th-input-dark" type="text" id="editFullName" name="full_name" required>
+                </div>
+                <div class="col-12">
+                  <label class="form-label th-form-label" for="editEmail">Email</label>
+                  <input class="form-control th-input-dark" type="email" id="editEmail" name="email" required>
+                </div>
+                <div class="col-12">
+                  <label class="form-label th-form-label" for="editPhone">Số điện thoại</label>
+                  <input class="form-control th-input-dark" type="text" id="editPhone" name="phone">
+                </div>
+                <div class="col-12">
+                  <label class="form-label th-form-label" for="editAddress">Địa chỉ</label>
+                  <input class="form-control th-input-dark" type="text" id="editAddress" name="address">
+                </div>
+                <div class="col-12">
+                  <label class="form-label th-form-label" for="editRole">Quyền</label>
+                  <select class="form-select th-input-dark" id="editRole" name="role" required>
+                    <option value="khach_hang">Khách hàng</option>
+                    <option value="nhan_vien">Nhân viên</option>
+                    <option value="quan_tri_vien">Admin</option>
+                  </select>
+                </div>
+                <div class="col-12">
+                  <label class="form-label th-form-label" for="editPassword">Mật khẩu mới (Bỏ trống nếu không đổi)</label>
+                  <input class="form-control th-input-dark" type="password" id="editPassword" name="password" minlength="8" pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$" title="Mật khẩu phải ≥ 8 ký tự và gồm chữ hoa, chữ thường, số, ký tự đặc biệt" placeholder="Nhập để đổi mật khẩu">
+                </div>
+                <div class="col-12 d-flex justify-content-end gap-2 mt-2">
+                  <button type="button" class="btn btn-outline-light rounded-pill" data-bs-dismiss="modal">Hủy</button>
+                  <button class="btn btn-th-primary rounded-pill px-4" type="submit">Lưu</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+      <?php endif; ?>
 
       <!-- REPORTS -->
       <section class="d-none" data-admin-pane="reports">
@@ -499,6 +570,19 @@ function syncValuePlaceholder(sel) {
   if (sel.value === 'day')   { inp.value = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`; inp.placeholder = 'vd: 2026-03-22'; }
   if (sel.value === 'month') { inp.value = `${now.getFullYear()}-${pad(now.getMonth()+1)}`; inp.placeholder = 'vd: 2026-03'; }
   if (sel.value === 'year')  { inp.value = `${now.getFullYear()}`; inp.placeholder = 'vd: 2026'; }
+}
+
+function openEditUserModal(user) {
+  document.getElementById('editUserId').value = user.ma_nguoi_dung;
+  document.getElementById('editFullName').value = user.ho_ten;
+  document.getElementById('editEmail').value = user.email;
+  document.getElementById('editPhone').value = user.so_dien_thoai || '';
+  document.getElementById('editAddress').value = user.dia_chi || '';
+  document.getElementById('editRole').value = user.vai_tro;
+  document.getElementById('editPassword').value = '';
+  
+  const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
+  modal.show();
 }
 </script>
 </body>

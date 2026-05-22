@@ -20,6 +20,48 @@ class AdminController
         }
     }
 
+
+    public function showCheckin(): void
+    {
+        // Cho phép cả nhân viên và admin truy cập
+        $user = $_SESSION['user'] ?? null;
+        if (!$user || !in_array($user['role'] ?? '', ['quan_tri_vien', 'nhan_vien'], true)) {
+            $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Bạn không có quyền truy cập.'];
+            header('Location: index.php');
+            exit;
+        }
+
+        require_once __DIR__ . '/../view/admin/checkin.php';
+    }
+
+    public function processCheckin(): void
+    {
+        $user = $_SESSION['user'] ?? null;
+        if (!$user || !in_array($user['role'] ?? '', ['quan_tri_vien', 'nhan_vien'], true)) {
+            $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Bạn không có quyền soát vé.'];
+            header('Location: index.php');
+            exit;
+        }
+
+        $qrCode = $_POST['qr_code'] ?? '';
+        $staffId = (int)($user['ma_nguoi_dung'] ?? $this->eventTicketModel->resolveCreatorIdByEmail((string)$user['email']));
+
+        $result = $this->eventTicketModel->checkInTicket($qrCode, $staffId);
+
+        if ($result['success']) {
+            $t = $result['ticket'];
+            $_SESSION['flash'] = [
+                'type' => 'success', 
+                'message' => "✅ HỢP LỆ! Khách: " . htmlspecialchars((string)($t['ten_khach_hang'] ?? '')) . " | Sự kiện: " . htmlspecialchars((string)($t['ten_su_kien'] ?? '')) . " | Vé: " . htmlspecialchars((string)($t['ten_loai_ve'] ?? ''))
+            ];
+        } else {
+            $_SESSION['flash'] = ['type' => 'danger', 'message' => '❌ ' . $result['message']];
+        }
+
+        header('Location: index.php?action=admin_checkin');
+        exit;
+    }
+
     public function createUser(): void
     {
         $user = $_SESSION['user'] ?? null;
@@ -82,7 +124,7 @@ class AdminController
 
     public function createCategory(): void
     {
-        if (!$this->isAdmin()) {
+        if (!$this->isStaffOrAdmin()) {
             return;
         }
 
@@ -97,7 +139,7 @@ class AdminController
 
     public function updateCategory(): void
     {
-        if (!$this->isAdmin()) {
+        if (!$this->isStaffOrAdmin()) {
             return;
         }
         $id = (int)($_POST['ma_danh_muc'] ?? 0);
@@ -111,7 +153,7 @@ class AdminController
 
     public function deleteCategory(): void
     {
-        if (!$this->isAdmin()) {
+        if (!$this->isStaffOrAdmin()) {
             return;
         }
         $id = (int)($_POST['ma_danh_muc'] ?? 0);
@@ -123,7 +165,7 @@ class AdminController
 
     public function createEvent(): void
     {
-        if (!$this->isAdmin()) {
+        if (!$this->isStaffOrAdmin()) {
             return;
         }
 
@@ -156,23 +198,29 @@ class AdminController
             'gio_to_chuc' => trim($_POST['gio_to_chuc'] ?? ''),
             'dia_diem' => trim($_POST['dia_diem'] ?? ''),
             'hinh_anh' => $hinhAnh,
+            'trang_thai' => (($user['role'] ?? '') === 'quan_tri_vien') ? 'da_duyet' : 'cho_duyet',
         ];
 
         if ($payload['ma_danh_muc'] <= 0 || $payload['ten_su_kien'] === '' || $payload['ngay_to_chuc'] === '' || $payload['gio_to_chuc'] === '' || $payload['dia_diem'] === '') {
             $_SESSION['flash'] = ['type' => 'warning', 'message' => 'Vui lòng nhập đầy đủ thông tin sự kiện.'];
-            header('Location: index.php?action=admin_tickets');
+            header('Location: index.php?action=admin_events');
             exit;
         }
 
         $result = $this->eventTicketModel->createEvent($payload);
+        
+        if ($result['success'] && (($user['role'] ?? '') !== 'quan_tri_vien')) {
+            $result['message'] = 'Tạo sự kiện chờ duyệt thành công! Vui lòng chờ Admin duyệt.';
+        }
+
         $_SESSION['flash'] = ['type' => $result['success'] ? 'success' : 'danger', 'message' => $result['message']];
-        header('Location: index.php?action=admin_tickets');
+        header('Location: index.php?action=admin_events');
         exit;
     }
 
     public function updateEvent(): void
     {
-        if (!$this->isAdmin()) {
+        if (!$this->isStaffOrAdmin()) {
             return;
         }
 
@@ -212,20 +260,42 @@ class AdminController
 
     public function deleteEvent(): void
     {
-        if (!$this->isAdmin()) {
+        if (!$this->isStaffOrAdmin()) {
             return;
         }
 
         $id = (int)($_POST['ma_su_kien'] ?? 0);
         $result = $this->eventTicketModel->deleteEvent($id);
         $_SESSION['flash'] = ['type' => $result['success'] ? 'success' : 'danger', 'message' => $result['message']];
-        header('Location: index.php?action=admin_tickets');
+        header('Location: index.php?action=admin_events');
+        exit;
+    }
+
+    public function approveEvent(): void
+    {
+        $user = $_SESSION['user'] ?? null;
+        if (($user['role'] ?? '') !== 'quan_tri_vien') {
+            $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Bạn không có quyền duyệt sự kiện.'];
+            header('Location: index.php?action=admin_events');
+            exit;
+        }
+
+        $id = (int)($_POST['ma_su_kien'] ?? 0);
+        $result = $this->eventTicketModel->updateEventStatus($id, 'da_duyet');
+        
+        if ($result['success']) {
+            $_SESSION['flash'] = ['type' => 'success', 'message' => 'Đã duyệt sự kiện thành công!'];
+        } else {
+            $_SESSION['flash'] = ['type' => 'danger', 'message' => $result['message']];
+        }
+
+        header('Location: index.php?action=admin_events');
         exit;
     }
 
     public function createTicketType(): void
     {
-        if (!$this->isAdmin()) {
+        if (!$this->isStaffOrAdmin()) {
             return;
         }
 
@@ -251,7 +321,7 @@ class AdminController
 
     public function updateTicketType(): void
     {
-        if (!$this->isAdmin()) {
+        if (!$this->isStaffOrAdmin()) {
             return;
         }
         $payload = [
@@ -274,7 +344,7 @@ class AdminController
 
     public function deleteTicketType(): void
     {
-        if (!$this->isAdmin()) {
+        if (!$this->isStaffOrAdmin()) {
             return;
         }
         $id = (int)($_POST['ma_loai_ve'] ?? 0);
@@ -286,7 +356,7 @@ class AdminController
 
     public function confirmOrderPayment(): void
     {
-        if (!$this->isAdmin()) {
+        if (!$this->isStaffOrAdmin()) {
             return;
         }
 
@@ -305,7 +375,7 @@ class AdminController
 
     public function deleteOrder(): void
     {
-        if (!$this->isAdmin()) {
+        if (!$this->isStaffOrAdmin()) {
             return;
         }
 
@@ -324,7 +394,7 @@ class AdminController
 
     public function deleteAllOrders(): void
     {
-        if (!$this->isAdmin()) {
+        if (!$this->isStaffOrAdmin()) {
             return;
         }
 
@@ -336,7 +406,7 @@ class AdminController
 
     public function createNews(): void
     {
-        if (!$this->isAdmin()) {
+        if (!$this->isStaffOrAdmin()) {
             return;
         }
 
@@ -381,7 +451,7 @@ class AdminController
 
     public function updateNews(): void
     {
-        if (!$this->isAdmin()) {
+        if (!$this->isStaffOrAdmin()) {
             return;
         }
 
@@ -417,7 +487,7 @@ class AdminController
 
     public function deleteNews(): void
     {
-        if (!$this->isAdmin()) {
+        if (!$this->isStaffOrAdmin()) {
             return;
         }
 
@@ -434,10 +504,98 @@ class AdminController
         exit;
     }
 
+    public function updateUser(): void
+    {
+        if (!$this->isAdmin()) {
+            return;
+        }
+
+        $userId = (int)($_POST['user_id'] ?? 0);
+        $fullName = trim($_POST['full_name'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $phone = trim($_POST['phone'] ?? '');
+        $address = trim($_POST['address'] ?? '');
+        $role = trim($_POST['role'] ?? 'khach_hang');
+        $password = $_POST['password'] ?? '';
+
+        if ($userId <= 0 || $fullName === '' || $email === '') {
+            $_SESSION['flash'] = ['type' => 'warning', 'message' => 'Dữ liệu không hợp lệ. Vui lòng nhập đầy đủ họ tên và email.'];
+            header('Location: index.php?action=admin&tab=users');
+            exit;
+        }
+
+        if (!in_array($role, ['khach_hang', 'nhan_vien', 'quan_tri_vien'], true)) {
+            $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Quyền không hợp lệ.'];
+            header('Location: index.php?action=admin&tab=users');
+            exit;
+        }
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Email không đúng định dạng.'];
+            header('Location: index.php?action=admin&tab=users');
+            exit;
+        }
+
+        if ($password !== '') {
+            $pwOk = (bool)preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/', $password);
+            if (!$pwOk) {
+                $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Mật khẩu mới phải ≥ 8 ký tự và gồm chữ hoa, chữ thường, số, ký tự đặc biệt.'];
+                header('Location: index.php?action=admin&tab=users');
+                exit;
+            }
+        }
+
+        $result = $this->userModel->updateUser($userId, $fullName, $email, $phone, $address, $role, $password);
+
+        $_SESSION['flash'] = ['type' => $result['success'] ? 'success' : 'danger', 'message' => $result['message']];
+        header('Location: index.php?action=admin&tab=users');
+        exit;
+    }
+
+    public function deleteUser(): void
+    {
+        if (!$this->isAdmin()) {
+            return;
+        }
+
+        $id = (int)($_POST['user_id'] ?? 0);
+        
+        // Không cho phép tài khoản tự xóa chính mình
+        $currentUser = $_SESSION['user'] ?? null;
+        if ($currentUser && isset($currentUser['ma_nguoi_dung']) && $currentUser['ma_nguoi_dung'] == $id) {
+             $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Bạn không thể tự xóa tài khoản của chính mình.'];
+             header('Location: index.php?action=admin&tab=users');
+             exit;
+        }
+
+        if ($id <= 0) {
+            $_SESSION['flash'] = ['type' => 'danger', 'message' => 'ID người dùng không hợp lệ.'];
+            header('Location: index.php?action=admin&tab=users');
+            exit;
+        }
+
+        $result = $this->userModel->deleteUser($id);
+        $_SESSION['flash'] = ['type' => $result['success'] ? 'success' : 'danger', 'message' => $result['message']];
+        header('Location: index.php?action=admin&tab=users');
+        exit;
+    }
+
     private function isAdmin(): bool
     {
         $user = $_SESSION['user'] ?? null;
         if (!$user || ($user['role'] ?? null) !== 'quan_tri_vien') {
+            $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Bạn không có quyền thực hiện thao tác này.'];
+            header('Location: index.php');
+            exit;
+        }
+        return true;
+    }
+
+    private function isStaffOrAdmin(): bool
+    {
+        $user = $_SESSION['user'] ?? null;
+        $role = $user['role'] ?? null;
+        if (!$user || ($role !== 'quan_tri_vien' && $role !== 'nhan_vien')) {
             $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Bạn không có quyền thực hiện thao tác này.'];
             header('Location: index.php');
             exit;

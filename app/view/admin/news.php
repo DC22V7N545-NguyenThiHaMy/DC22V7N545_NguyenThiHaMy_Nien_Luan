@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -11,7 +11,7 @@ if (!$user) {
     header('Location: index.php?action=login');
     exit;
 }
-if (($user['role'] ?? null) !== 'quan_tri_vien') {
+if (!in_array($user['role'] ?? null, ['quan_tri_vien', 'nhan_vien'], true)) {
     $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Bạn không có quyền truy cập trang quản trị.'];
     header('Location: index.php');
     exit;
@@ -40,7 +40,6 @@ $news = $newsModel ? $newsModel->getNews() : [];
     <a class="btn btn-outline-light btn-sm" href="index.php?action=logout">Đăng xuất</a>
   </div>
 </nav>
-
 <main class="container py-4 th-admin-shell">
   <?php require __DIR__ . '/../partials/toast.php'; ?>
 
@@ -61,6 +60,7 @@ $news = $newsModel ? $newsModel->getNews() : [];
         <div class="collapse" id="createBox">
           <div class="card-body">
             <form action="index.php?action=create_news" method="POST" enctype="multipart/form-data">
+                <?= csrf_field() ?>
               <div class="row g-3">
                 <div class="col-md-12">
                   <label class="form-label">Tiêu đề</label>
@@ -131,22 +131,24 @@ $news = $newsModel ? $newsModel->getNews() : [];
                         </span>
                       </td>
                       <td class="text-end">
-                        <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#editBox<?= $id ?>" aria-expanded="false">
+                        <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#editBox<?= e($id) ?>" aria-expanded="false">
                           <i class="fas fa-edit"></i> Sửa
                         </button>
                         <form method="POST" action="index.php?action=delete_news" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn xóa tin tức này?')">
-                          <input type="hidden" name="ma_tin_tuc" value="<?= $id ?>">
+                <?= csrf_field() ?>
+                          <input type="hidden" name="ma_tin_tuc" value="<?= e($id) ?>">
                           <button type="submit" class="btn btn-outline-danger btn-sm">
                             <i class="fas fa-trash"></i> Xóa
                           </button>
                         </form>
                       </td>
                     </tr>
-                    <tr class="collapse" id="editBox<?= $id ?>">
+                    <tr class="collapse" id="editBox<?= e($id) ?>">
                       <td colspan="6">
                         <div class="p-3 bg-dark rounded">
                           <form action="index.php?action=update_news" method="POST" enctype="multipart/form-data">
-                            <input type="hidden" name="ma_tin_tuc" value="<?= $id ?>">
+                <?= csrf_field() ?>
+                            <input type="hidden" name="ma_tin_tuc" value="<?= e($id) ?>">
                             <input type="hidden" name="current_hinh_anh" value="<?= htmlspecialchars((string)$n['hinh_anh']) ?>">
                             <div class="row g-3">
                               <div class="col-md-12">
@@ -167,12 +169,12 @@ $news = $newsModel ? $newsModel->getNews() : [];
                                   </div>
                                 <?php endif; ?>
                                 <div class="mt-2">
-                                  <img id="editImagePreview<?= $id ?>" src="" alt="Preview" class="img-thumbnail" style="max-width: 200px; display: none;">
+                                  <img id="editImagePreview<?= e($id) ?>" src="" alt="Preview" class="img-thumbnail" style="max-width: 200px; display: none;">
                                 </div>
                               </div>
                               <div class="col-12">
                                 <button type="submit" class="btn btn-primary">Cập nhật</button>
-                                <button type="button" class="btn btn-secondary" data-bs-toggle="collapse" data-bs-target="#editBox<?= $id ?>">Hủy</button>
+                                <button type="button" class="btn btn-secondary" data-bs-toggle="collapse" data-bs-target="#editBox<?= e($id) ?>">Hủy</button>
                               </div>
                             </div>
                           </form>
