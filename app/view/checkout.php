@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 if (session_status() === PHP_SESSION_NONE) session_start();
 $flash = $_SESSION['flash'] ?? null;
 unset($_SESSION['flash']);
@@ -44,7 +44,7 @@ require_once __DIR__ . '/layouts/header.php';
           <div class="small text-muted mb-1">Số tiền</div>
           <div class="d-flex justify-content-between align-items-center mb-2">
             <strong id="amt"><?= number_format($paymentInfo['transfer_amount'], 0, ',', '.') ?> đ</strong>
-            <button class="btn btn-outline-light copy-btn" onclick="doCopy('<?= $paymentInfo['transfer_amount'] ?>')">Copy</button>
+            <button class="btn btn-outline-light copy-btn" onclick="doCopy('<?= e($paymentInfo['transfer_amount']) ?>')">Copy</button>
           </div>
           <div class="small text-muted mb-1">Nội dung chuyển khoản</div>
           <div class="d-flex justify-content-between align-items-center">

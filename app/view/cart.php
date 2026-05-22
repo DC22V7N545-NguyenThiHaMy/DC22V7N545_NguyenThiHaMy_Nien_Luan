@@ -309,6 +309,7 @@ require_once __DIR__ . '/layouts/header.php';
                                 <?= number_format((float)$item['gia_ve'], 0, ',', '.') ?> đ
                             </div>
                             <form method="POST" action="index.php?action=update_cart" style="display: contents;">
+                <?= csrf_field() ?>
                                 <div class="qty-control">
                                     <input type="hidden" name="id" value="<?= (int)$ma_loai_ve ?>">
                                     <input type="number" name="so_luong" class="qty-input" value="<?= (int)$item['so_luong'] ?>" min="1" onchange="this.form.submit()">
@@ -342,6 +343,7 @@ require_once __DIR__ . '/layouts/header.php';
 
                     <div class="checkout-section">
                         <form action="index.php" method="POST" style="margin-bottom: 0;">
+                <?= csrf_field() ?>
                             <input type="hidden" name="action" value="checkout_cart">
                             <?php foreach ($cart as $ma_loai_ve => $item): ?>
                                 <input type="hidden" name="cart[<?= (int)$ma_loai_ve ?>]" value="<?= (int)$item['so_luong'] ?>">

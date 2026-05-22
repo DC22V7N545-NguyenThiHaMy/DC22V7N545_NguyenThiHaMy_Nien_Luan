@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 $user = $_SESSION['user'] ?? null;
 
 $pageTitle = 'Thanh toán MoMo - TicketHub';
@@ -39,7 +39,7 @@ require_once __DIR__ . '/layouts/header.php';
               <span class="text-muted small d-block">Số tiền</span>
               <div class="d-flex align-items-center justify-content-between gap-2">
                 <strong id="transfer-amount"><?= number_format($transferAmount, 0, ',', '.') ?> đ</strong>
-                <button type="button" class="btn btn-outline-light btn-sm" onclick="copyText('<?= $transferAmount ?>')">Copy tiền</button>
+                <button type="button" class="btn btn-outline-light btn-sm" onclick="copyText('<?= e($transferAmount) ?>')">Copy tiền</button>
               </div>
             </div>
             <div>
