@@ -43,20 +43,7 @@ class User {
      * @return array ['success' => bool, 'message' => string, 'user' => array|null]
      */
     public function login($email, $password) {
-        // Tài khoản quản trị mặc định (phục vụ demo/đồ án)
-        if ($email === 'admin@gmail.com' && $password === 'admin') {
-            return [
-                'success' => true,
-                'message' => 'Đăng nhập thành công!',
-                'user' => [
-                    'ma_nguoi_dung' => 0,
-                    'ho_ten' => 'Admin',
-                    'email' => $email,
-                    'vai_tro' => 'quan_tri_vien',
-                ],
-            ];
-        }
-
+        // Xác thực qua DB — mật khẩu được kiểm tra bằng password_verify (Bcrypt)
         $stmt = $this->conn->prepare("SELECT ma_nguoi_dung, ho_ten, mat_khau, vai_tro FROM nguoi_dung WHERE email = ?");
         $stmt->bind_param("s", $email);
         $stmt->execute();
@@ -149,5 +136,66 @@ class User {
 
         $stmt->close();
         return ['success' => true, 'message' => 'Đổi mật khẩu thành công!'];
+    }
+
+    /**
+     * Cập nhật thông tin người dùng.
+     *
+     * @return array ['success' => bool, 'message' => string]
+     */
+    public function updateUser(int $userId, string $fullName, string $email, string $phone, string $address, string $role, string $password = '') {
+        // Kiểm tra xem email cập nhật có bị trùng với user khác không
+        $stmt = $this->conn->prepare("SELECT ma_nguoi_dung FROM nguoi_dung WHERE email = ? AND ma_nguoi_dung != ?");
+        $stmt->bind_param("si", $email, $userId);
+        $stmt->execute();
+        $stmt->store_result();
+        
+        if ($stmt->num_rows > 0) {
+            $stmt->close();
+            return ['success' => false, 'message' => 'Email đã tồn tại!'];
+        }
+        $stmt->close();
+
+        if ($password !== '') {
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+            $stmt = $this->conn->prepare(
+                "UPDATE nguoi_dung SET ho_ten = ?, email = ?, so_dien_thoai = ?, dia_chi = ?, vai_tro = ?, mat_khau = ? WHERE ma_nguoi_dung = ?"
+            );
+            $stmt->bind_param("ssssssi", $fullName, $email, $phone, $address, $role, $hashedPassword, $userId);
+        } else {
+            $stmt = $this->conn->prepare(
+                "UPDATE nguoi_dung SET ho_ten = ?, email = ?, so_dien_thoai = ?, dia_chi = ?, vai_tro = ? WHERE ma_nguoi_dung = ?"
+            );
+            $stmt->bind_param("sssssi", $fullName, $email, $phone, $address, $role, $userId);
+        }
+
+        if ($stmt->execute()) {
+            return ['success' => true, 'message' => 'Cập nhật thành công.'];
+        }
+        
+        return ['success' => false, 'message' => 'Lỗi: ' . $stmt->error];
+    }
+
+    /**
+     * Xóa người dùng.
+     *
+     * @return array ['success' => bool, 'message' => string]
+     */
+    public function deleteUser(int $id) {
+        $stmt = $this->conn->prepare("DELETE FROM nguoi_dung WHERE ma_nguoi_dung = ?");
+        $stmt->bind_param("i", $id);
+        
+        try {
+            if ($stmt->execute()) {
+                return ['success' => true, 'message' => 'Đã xóa người dùng.'];
+            }
+            return ['success' => false, 'message' => 'Lỗi khi xóa người dùng.'];
+        } catch (mysqli_sql_exception $e) {
+            // Lỗi khóa ngoại (code 1451)
+            if ($e->getCode() == 1451) {
+                return ['success' => false, 'message' => 'Không thể xóa người dùng này vì họ đã có dữ liệu giao dịch hoặc sự kiện.'];
+            }
+            return ['success' => false, 'message' => 'Lỗi cơ sở dữ liệu: ' . $e->getMessage()];
+        }
     }
 }
