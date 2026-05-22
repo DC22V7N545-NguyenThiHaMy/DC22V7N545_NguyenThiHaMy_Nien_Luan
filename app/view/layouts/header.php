@@ -21,12 +21,12 @@ $activeAction = $activeAction ?? ($_GET['action'] ?? 'home');
   <title><?= htmlspecialchars($pageTitle) ?></title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" integrity="sha512-pIV2dM46Eb1RkaNqC8SJPnPIqlqp7l1vQAkse1E57RpjuqzRC3BVR6u5f5ADDpT5LLnRw+E0M0U6qsks7eJ7AA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link href="/public/css/style.css" rel="stylesheet">
+  <link href="/public/css/style.css?v=<?= time() ?>" rel="stylesheet">
 </head>
 <body class="<?= htmlspecialchars($bodyClass) ?>">
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm">
   <div class="container">
-    <a class="navbar-brand fw-bold" href="index.php"><span class="text-warning">Ticket</span>Hub</a>
+    <a class="navbar-brand fw-bold fs-3" href="index.php"><span class="text-warning">Ticket</span>Hub</a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
@@ -34,14 +34,12 @@ $activeAction = $activeAction ?? ($_GET['action'] ?? 'home');
       <ul class="navbar-nav me-auto">
         <li class="nav-item"><a class="nav-link <?= $activeAction === 'home' ? 'active' : '' ?>" href="index.php">Trang chủ</a></li>
         <li class="nav-item"><a class="nav-link <?= $activeAction === 'events' ? 'active' : '' ?>" href="index.php?action=events">Sự kiện</a></li>
+        <li class="nav-item"><a class="nav-link <?= $activeAction === 'about' ? 'active' : '' ?>" href="index.php?action=about">Giới thiệu</a></li>
         <li class="nav-item"><a class="nav-link <?= $activeAction === 'news' ? 'active' : '' ?>" href="index.php?action=news">Tin tức</a></li>
-        <?php if ($activeAction === 'home'): ?>
-          <li class="nav-item"><a class="nav-link" href="#features">Tính năng</a></li>
-        <?php endif; ?>
       </ul>
 
       <!-- Search Bar visibility based on context -->
-      <?php if (!in_array($activeAction, ['login', 'register', 'admin', 'profile'])): ?>
+      <?php if (!in_array($activeAction, ['login', 'register', 'profile']) && strpos($activeAction, 'admin') !== 0): ?>
       <form method="GET" action="index.php" class="d-flex gap-2 me-3 ms-auto ms-lg-0" style="flex: 1; max-width: 250px;">
         <input type="hidden" name="action" value="events">
         <input type="text" name="search" class="form-control form-control-sm th-input-dark" placeholder="Tìm vé..." style="min-width: 150px; font-size: 0.9rem;" value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
@@ -59,7 +57,19 @@ $activeAction = $activeAction ?? ($_GET['action'] ?? 'home');
               <span class="badge bg-danger" style="position: absolute; top: -5px; right: 0; font-size: 10px;"><?= count($_SESSION['cart']) ?></span>
             <?php endif; ?>
           </a></li>
-          <li class="nav-item"><a class="nav-link <?= $activeAction === 'profile' ? 'active' : '' ?>" href="index.php?action=profile">Tài khoản</a></li>
+          
+          <?php if (in_array($user['role'] ?? '', ['quan_tri_vien', 'nhan_vien'], true)): ?>
+            <li class="nav-item ms-lg-2">
+              <a class="btn btn-sm btn-outline-warning <?= strpos($activeAction, 'admin') === 0 ? 'active' : '' ?>" href="index.php?action=admin">
+                Control Panel
+              </a>
+            </li>
+          <?php endif; ?>
+
+          <li class="nav-item ms-lg-2"><a class="nav-link d-flex align-items-center gap-2 <?= $activeAction === 'profile' ? 'active' : '' ?>" href="index.php?action=profile">
+            <img src="https://ui-avatars.com/api/?name=<?= urlencode($user['name'] ?? 'U') ?>&background=fbbf24&color=020617&rounded=true&bold=true&size=26" alt="Avatar" width="26" height="26" class="rounded-circle"> 
+            <?= htmlspecialchars($user['name'] ?? 'Tài khoản') ?>
+          </a></li>
           <li class="nav-item ms-lg-2"><a class="btn btn-outline-light btn-sm" href="index.php?action=logout">Đăng xuất</a></li>
         <?php else: ?>
           <li class="nav-item ms-lg-2"><a class="btn btn-outline-light btn-sm me-2 <?= $activeAction === 'login' ? 'active' : '' ?>" href="index.php?action=login">Đăng nhập</a></li>
