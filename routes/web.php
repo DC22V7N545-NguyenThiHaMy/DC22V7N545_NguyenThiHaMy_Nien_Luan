@@ -1,26 +1,50 @@
 <?php
-// Simple routing for a single-page event ticket system.
-// All the UI lives in app/view/main.php.
+// =========================================================================
+// ROUTER CHÍNH (Front Controller Pattern)
+// Luồng xử lý: Client → index.php → routes/web.php → Controller → Model → View
+// =========================================================================
 
+// Helpers & Config
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../app/helpers/security.php';
+
+// Controllers
 require_once __DIR__ . '/../app/controllers/AuthController.php';
 require_once __DIR__ . '/../app/controllers/AdminController.php';
 require_once __DIR__ . '/../app/controllers/TicketController.php';
+require_once __DIR__ . '/../app/controllers/CartController.php';
+
+// Models
 require_once __DIR__ . '/../app/model/EventTicket.php';
 
-// Start session early to support flash messages and login state.
+// Khởi tạo session sớm (hỗ trợ flash messages và trạng thái đăng nhập)
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-$authController = new AuthController($conn);
-$adminController = new AdminController($conn);
+// Khởi tạo các controller
+$authController   = new AuthController($conn);
+$adminController  = new AdminController($conn);
 $ticketController = new TicketController($conn);
+$cartController   = new CartController($conn);
 $eventTicketModel = new EventTicket($conn);
+
+// Xác định action từ request
 $action = $_GET['action'] ?? $_POST['action'] ?? 'home';
 
-// Handle POST actions
+// =========================================================================
+// XỬ LÝ POST ACTIONS
+// =========================================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    // Xác thực CSRF cho tất cả POST request
+    // Ngoại trừ SePay IPN (webhook callback từ bên ngoài, dùng secret key riêng)
+    $csrfExemptActions = ['sepay_ipn'];
+    if (!in_array($action, $csrfExemptActions, true)) {
+        csrf_protect('index.php');
+    }
+
+    // Xác thực (Auth)
     if ($action === 'register') {
         $authController->register();
     }
@@ -30,9 +54,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'change_password') {
         $authController->changePassword();
     }
+
+    // Quản lý người dùng (Admin only)
     if ($action === 'create_user') {
         $adminController->createUser();
     }
+    if ($action === 'update_user') {
+        $adminController->updateUser();
+    }
+    if ($action === 'delete_user') {
+        $adminController->deleteUser();
+    }
+
+    // Quản lý danh mục
     if ($action === 'create_category') {
         $adminController->createCategory();
     }
@@ -42,6 +76,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'delete_category') {
         $adminController->deleteCategory();
     }
+
+    // Quản lý sự kiện
     if ($action === 'create_event') {
         $adminController->createEvent();
     }
@@ -51,6 +87,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'delete_event') {
         $adminController->deleteEvent();
     }
+    if ($action === 'approve_event') {
+        $adminController->approveEvent();
+    }
+
+    // Quản lý loại vé
     if ($action === 'create_ticket_type') {
         $adminController->createTicketType();
     }
@@ -60,6 +101,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'delete_ticket_type') {
         $adminController->deleteTicketType();
     }
+
+    // Quản lý đơn hàng
     if ($action === 'confirm_order_payment') {
         $adminController->confirmOrderPayment();
     }
@@ -69,6 +112,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'delete_all_orders') {
         $adminController->deleteAllOrders();
     }
+
+    // Soát vé (Check-in)
+    if ($action === 'process_checkin') {
+        $adminController->processCheckin();
+    }
+
+    // Quản lý tin tức
     if ($action === 'create_news') {
         $adminController->createNews();
     }
@@ -78,95 +128,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'delete_news') {
         $adminController->deleteNews();
     }
+
+    // Mua vé
     if ($action === 'buy_ticket') {
         $ticketController->buyTicket();
     }
+
+    // Giỏ hàng (delegate → CartController)
     if ($action === 'add_to_cart') {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        $user = $_SESSION['user'] ?? null;
-        if (!$user || ($user['role'] ?? 'khach_hang') !== 'khach_hang') {
-            $_SESSION['flash'] = ['type' => 'warning', 'message' => 'Vui lòng đăng nhập để sử dụng giỏ hàng.'];
-            header('Location: index.php?action=login');
-            exit;
-        }
-        
-        $ma_loai_ve = (int)($_POST['ma_loai_ve'] ?? 0);
-        $so_luong = (int)($_POST['so_luong'] ?? 1);
-        
-        if (!isset($_SESSION['cart'])) {
-            $_SESSION['cart'] = [];
-        }
-        
-        if (isset($_SESSION['cart'][$ma_loai_ve])) {
-            $_SESSION['cart'][$ma_loai_ve]['so_luong'] += $so_luong;
-        } else {
-            // Get ticket details
-            $eventTicketModel = new EventTicket($conn);
-            $ticket = $eventTicketModel->getTicketDetail($ma_loai_ve);
-            if ($ticket) {
-                $_SESSION['cart'][$ma_loai_ve] = [
-                    'ten_su_kien' => $ticket['ten_su_kien'],
-                    'ten_loai_ve' => $ticket['ten_loai_ve'],
-                    'gia_ve' => $ticket['gia_ve'],
-                    'so_luong' => $so_luong
-                ];
-            }
-        }
-        
-        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Đã thêm vé vào giỏ hàng.'];
-        header('Location: index.php?action=cart');
-        exit;
+        $cartController->addToCart();
     }
     if ($action === 'update_cart') {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        $ma_loai_ve = (int)($_POST['id'] ?? 0);
-        $so_luong = (int)($_POST['so_luong'] ?? 1);
-        
-        if (isset($_SESSION['cart'][$ma_loai_ve])) {
-            if ($so_luong <= 0) {
-                unset($_SESSION['cart'][$ma_loai_ve]);
-            } else {
-                $_SESSION['cart'][$ma_loai_ve]['so_luong'] = $so_luong;
-            }
-            $_SESSION['flash'] = ['type' => 'info', 'message' => 'Đã cập nhật giỏ hàng.'];
-        }
-        header('Location: index.php?action=cart');
-        exit;
+        $cartController->updateCart();
     }
     if ($action === 'checkout_cart') {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        $user = $_SESSION['user'] ?? null;
-        if (!$user || ($user['role'] ?? 'khach_hang') !== 'khach_hang') {
-            $_SESSION['flash'] = ['type' => 'warning', 'message' => 'Vui lòng đăng nhập để thanh toán.'];
-            header('Location: index.php?action=login');
-            exit;
-        }
-
-        $cartData = $_SESSION['cart'] ?? [];
-        if (empty($cartData)) {
-            $_SESSION['flash'] = ['type' => 'warning', 'message' => 'Giỏ hàng trống.'];
-            header('Location: index.php?action=cart');
-            exit;
-        }
-
-        $result = $eventTicketModel->createOrderFromCart($cartData, (string)$user['email']);
-        if (!$result['success']) {
-            $_SESSION['flash'] = ['type' => 'danger', 'message' => $result['message']];
-            header('Location: index.php?action=cart');
-            exit;
-        }
-
-        unset($_SESSION['cart']);
-        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Đặt vé thành công! Đơn hàng #' . $result['order_id'] . ' đang chờ admin xác nhận. Vé QR sẽ hiện sau khi thanh toán được duyệt.'];
-        header('Location: index.php?action=profile');
-        exit;
+        $cartController->checkoutCart();
     }
+
+    // SePay Webhook (IPN)
     if ($action === 'sepay_ipn') {
         $ticketController->sepayIpn();
     }
@@ -175,16 +154,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Handle GET actions
+// =========================================================================
+// XỬ LÝ GET ACTIONS
+// =========================================================================
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+
+    // Đăng xuất
     if ($action === 'logout') {
         $authController->logout();
     }
 
+    // Xuất báo cáo Excel/CSV
     if ($action === 'export_statistics') {
         $user = $_SESSION['user'] ?? null;
         if (!$user || ($user['role'] ?? null) !== 'quan_tri_vien') {
-            header('Location: index.php'); exit;
+            header('Location: index.php');
+            exit;
         }
         $type  = $_GET['type']  ?? 'month';
         $value = $_GET['value'] ?? date('Y-m');
@@ -195,7 +180,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         header('Content-Disposition: attachment; filename="' . $filename . '"');
         header('Cache-Control: no-cache');
         $out = fopen('php://output', 'w');
-        // BOM UTF-8 cho Excel
+        // BOM UTF-8 để Excel đọc đúng tiếng Việt
         fputs($out, "\xEF\xBB\xBF");
         fputcsv($out, ['Mã đơn', 'Khách hàng', 'Email', 'Chi tiết vé', 'Tổng vé', 'Tổng tiền (đ)', 'Ngày tạo']);
         foreach ($stats['orders'] as $o) {
@@ -210,11 +195,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             ]);
         }
         fputcsv($out, []);
-        fputcsv($out, ['TỔNG CỘNG', '', '', '', $stats['summary']['tong_ve'] ?? 0, number_format((float)($stats['summary']['tong_doanh_thu'] ?? 0), 0, '.', ''), '']);
+        fputcsv($out, [
+            'TỔNG CỘNG', '', '', '',
+            $stats['summary']['tong_ve'] ?? 0,
+            number_format((float)($stats['summary']['tong_doanh_thu'] ?? 0), 0, '.', ''),
+            '',
+        ]);
         fclose($out);
         exit;
     }
 
+    // Trang Admin
     if ($action === 'admin') {
         require_once __DIR__ . '/../app/view/admin/dashboard.php';
         return;
@@ -235,22 +226,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         require_once __DIR__ . '/../app/view/admin/news.php';
         return;
     }
-
-    if ($action === 'staff') {
-        require_once __DIR__ . '/../app/view/staff/dashboard.php';
+    if ($action === 'admin_checkin') {
+        $adminController->showCheckin();
         return;
     }
 
+    // Nhân viên redirect → admin
+    if ($action === 'staff') {
+        header('Location: index.php?action=admin');
+        exit;
+    }
+
+    // Trang công khai
+    if ($action === 'about') {
+        require_once __DIR__ . '/../app/view/about.php';
+        return;
+    }
     if ($action === 'profile') {
         require_once __DIR__ . '/../app/view/profile.php';
         return;
     }
-
     if ($action === 'login') {
         require_once __DIR__ . '/../app/view/Auth/dang_nhap.php';
         return;
     }
-
     if ($action === 'register') {
         require_once __DIR__ . '/../app/view/Auth/dang_ky.php';
         return;
@@ -271,22 +270,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         require_once __DIR__ . '/../app/view/news_detail.php';
         return;
     }
+
+    // Giỏ hàng
     if ($action === 'cart') {
         require_once __DIR__ . '/../app/view/cart.php';
         return;
     }
     if ($action === 'remove_from_cart') {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        $ma_loai_ve = (int)($_GET['id'] ?? 0);
-        if (isset($_SESSION['cart'][$ma_loai_ve])) {
-            unset($_SESSION['cart'][$ma_loai_ve]);
-            $_SESSION['flash'] = ['type' => 'info', 'message' => 'Đã xóa khỏi giỏ hàng.'];
-        }
-        header('Location: index.php?action=cart');
-        exit;
+        $cartController->removeFromCart();
     }
+
+    // Thanh toán
     if ($action === 'payment') {
         $user = $_SESSION['user'] ?? null;
         if (!$user) {
@@ -307,10 +301,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if ($action === 'payment_status') {
         header('Content-Type: application/json; charset=utf-8');
         $user = $_SESSION['user'] ?? null;
-        if (!$user) { echo json_encode(['success' => false]); exit; }
+        if (!$user) {
+            echo json_encode(['success' => false]);
+            exit;
+        }
         $orderId = (int)($_GET['order_id'] ?? 0);
         $info = $eventTicketModel->getCartOrderPaymentInfo($orderId, (string)$user['email']);
-        if (!$info) { echo json_encode(['success' => false]); exit; }
+        if (!$info) {
+            echo json_encode(['success' => false]);
+            exit;
+        }
         $paid = ($info['trang_thai_thanh_toan'] ?? '') === 'da_thanh_toan';
         echo json_encode(['success' => true, 'paid' => $paid, 'tickets' => $info['tickets'] ?? []]);
         exit;
@@ -321,7 +321,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         return;
     }
     if ($action === 'sepay_checkout') {
-        // Giữ compat, chuyển vào pay nội bộ
         $ticketController->pay();
         return;
     }
@@ -331,5 +330,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     }
 }
 
-// Default: render the main view (home)
+// =========================================================================
+// MẶC ĐỊNH: Trang chủ
+// =========================================================================
 require_once __DIR__ . '/../app/view/main.php';
